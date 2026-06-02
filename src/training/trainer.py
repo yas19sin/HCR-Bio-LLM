@@ -196,7 +196,7 @@ def train(config: dict[str, Any]) -> dict[str, Any]:
     logger = JSONLLogger(output_dir / "metrics.jsonl")
 
     device = resolve_device(config)
-    train_data, val_data, tokenizer = build_datasets(config)
+    train_data, val_data, tokenizer, dataset_info = build_datasets(config)
     model = build_model(config, tokenizer.vocab_size, tokenizer.mask_id).to(device)
 
     local_weight = float(config.get("local_neighbor_weight", 0.0))
@@ -220,6 +220,11 @@ def train(config: dict[str, Any]) -> dict[str, Any]:
         "device": str(device),
         "model_type": config.get("model_type", "transformer_baseline"),
         "task": task,
+        "dataset_source": dataset_info.source,
+        "dataset_chars": dataset_info.chars,
+        "dataset_fallback": dataset_info.fallback,
+        "train_windows": len(train_data),
+        "val_windows": len(val_data),
     }
     print(format_metrics(start_metrics))
     logger.write(start_metrics)

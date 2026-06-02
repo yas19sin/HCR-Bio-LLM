@@ -20,7 +20,7 @@ def main() -> None:
 
     device = resolve_device({"device": args.device})
     model, _, config, meta = load_checkpoint(args.checkpoint, device)
-    _, val_data, _ = build_datasets(config)
+    _, val_data, _, _ = build_datasets(config)
     task = get_task(config)
     summaries: list[dict[str, float]] = []
     for _ in range(args.batches):
@@ -49,4 +49,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

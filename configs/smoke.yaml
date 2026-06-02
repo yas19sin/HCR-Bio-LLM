@@ -1,5 +1,6 @@
 model_type: hcr_moment
 dataset: tiny_shakespeare
+allow_fallback_dataset: true
 output_dir: runs/smoke
 context_length: 32
 batch_size: 4
@@ -17,4 +18,3 @@ log_interval: 1
 grad_clip: 1.0
 task: causal
 sample_at_end: false
-

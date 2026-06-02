@@ -72,6 +72,7 @@ class CharacterDataset:
         self.data = data.contiguous()
         self.tokenizer = tokenizer
         self.context_length = context_length
+        self.split = split
 
     def __len__(self) -> int:
         return max(0, len(self.data) - self.context_length - 1)
@@ -111,36 +112,61 @@ class CharacterDataset:
         return Batch(input_ids=x.to(device), targets=targets.to(device))
 
 
-def load_text_dataset(config: dict[str, Any]) -> str:
+@dataclass
+class DatasetInfo:
+    source: str
+    chars: int
+    fallback: bool = False
+
+
+def load_text_dataset(config: dict[str, Any]) -> tuple[str, DatasetInfo]:
     data_path = config.get("data_path")
     if data_path:
-        return Path(data_path).read_text(encoding="utf-8")
+        path = Path(data_path)
+        text = path.read_text(encoding="utf-8")
+        return text, DatasetInfo(source=str(path), chars=len(text), fallback=False)
 
     dataset = config.get("dataset", "tiny_shakespeare")
     if dataset == "inline":
-        return str(config["text"])
+        text = str(config["text"])
+        return text, DatasetInfo(source="inline", chars=len(text), fallback=False)
 
     if dataset == "tiny_shakespeare":
         local_path = Path("data") / "tiny_shakespeare.txt"
         if local_path.exists():
-            return local_path.read_text(encoding="utf-8")
-        return FALLBACK_SHAKESPEARE
+            text = local_path.read_text(encoding="utf-8")
+            return text, DatasetInfo(source=str(local_path), chars=len(text), fallback=False)
+        if not bool(config.get("allow_fallback_dataset", True)):
+            raise FileNotFoundError(
+                "data/tiny_shakespeare.txt is required for this config. "
+                "The built-in fallback excerpt is too small for benchmark runs and will "
+                "produce memorization like near-zero train loss with exploding validation loss. "
+                "Use configs/smoke.yaml for an offline smoke test, provide data_path=..., "
+                "or set allow_fallback_dataset=true only for non-benchmark debugging."
+            )
+        return FALLBACK_SHAKESPEARE, DatasetInfo(
+            source="built-in fallback Shakespeare excerpt",
+            chars=len(FALLBACK_SHAKESPEARE),
+            fallback=True,
+        )
 
     candidate = Path(str(dataset))
     if candidate.exists():
-        return candidate.read_text(encoding="utf-8")
+        text = candidate.read_text(encoding="utf-8")
+        return text, DatasetInfo(source=str(candidate), chars=len(text), fallback=False)
 
     raise ValueError(
         f"unknown dataset {dataset!r}; use data_path, inline text, or data/tiny_shakespeare.txt"
     )
 
 
-def build_datasets(config: dict[str, Any]) -> tuple[CharacterDataset, CharacterDataset, CharTokenizer]:
-    text = load_text_dataset(config)
+def build_datasets(
+    config: dict[str, Any],
+) -> tuple[CharacterDataset, CharacterDataset, CharTokenizer, DatasetInfo]:
+    text, info = load_text_dataset(config)
     tokenizer = CharTokenizer.from_text(text)
     context_length = int(config.get("context_length", 128))
     val_fraction = float(config.get("val_fraction", 0.1))
     train_data = CharacterDataset(text, tokenizer, context_length, "train", val_fraction)
     val_data = CharacterDataset(text, tokenizer, context_length, "val", val_fraction)
-    return train_data, val_data, tokenizer
-
+    return train_data, val_data, tokenizer, info

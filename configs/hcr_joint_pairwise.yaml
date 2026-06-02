@@ -1,5 +1,6 @@
 model_type: hcr_joint_pairwise
 dataset: tiny_shakespeare
+allow_fallback_dataset: false
 output_dir: runs/hcr_joint_pairwise
 context_length: 128
 batch_size: 32
@@ -18,4 +19,3 @@ log_interval: 25
 grad_clip: 1.0
 task: causal
 variance_noncollapse_weight: 0.0001
-

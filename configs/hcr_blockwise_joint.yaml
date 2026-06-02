@@ -1,5 +1,6 @@
 model_type: hcr_blockwise_joint
 dataset: tiny_shakespeare
+allow_fallback_dataset: false
 output_dir: runs/hcr_blockwise_joint
 context_length: 128
 batch_size: 32

@@ -1,5 +1,6 @@
 model_type: hcr_blockwise_joint
 dataset: tiny_shakespeare
+allow_fallback_dataset: true
 output_dir: runs/smoke_faithful_hcr
 context_length: 32
 batch_size: 2
@@ -19,4 +20,3 @@ sample_at_end: false
 hcr_block_size: 2
 hcr_degree: 2
 hcr_output_scale: 0.1
-

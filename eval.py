@@ -46,7 +46,7 @@ def main() -> None:
     device = resolve_device({"device": args.device})
     model, tokenizer, config, meta = load_checkpoint(args.checkpoint, device)
     config["_vocab_size"] = tokenizer.vocab_size
-    _, val_data, _ = build_datasets(config)
+    _, val_data, _, _ = build_datasets(config)
     metrics = estimate_metrics(model, val_data, config, device, args.eval_batches)
     corrupted_loss = estimate_corrupted_loss(
         model,

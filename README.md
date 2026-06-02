@@ -57,28 +57,17 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-Run a tiny smoke experiment:
+Run a tiny offline smoke experiment. This is the only training command meant to
+use the built-in fallback excerpt:
 
 ```bash
 python train.py --config configs/smoke.yaml
 ```
 
-Run the baseline:
+Run the paper-direct HCR smoke path:
 
 ```bash
-python train.py --config configs/transformer_baseline.yaml
-```
-
-Run an HCR moment model:
-
-```bash
-python train.py --config configs/hcr_moment.yaml
-```
-
-Run the explicit blockwise HCR expected-value model:
-
-```bash
-python train.py --config configs/hcr_blockwise_joint.yaml
+python train.py --config configs/smoke_faithful_hcr.yaml
 ```
 
 Run the small synthetic HCR conditional-density demo:
@@ -91,6 +80,34 @@ Run the source-grounded HCR faithfulness check:
 
 ```bash
 python hcr_faithfulness_check.py
+```
+
+For benchmark-style runs, first provide real text data:
+
+```bash
+python train.py --config configs/transformer_baseline.yaml --set data_path=data/tiny_shakespeare.txt
+```
+
+Run the baseline, assuming `data/tiny_shakespeare.txt` exists:
+
+```bash
+python train.py --config configs/transformer_baseline.yaml
+```
+
+Run HCR variants on the same real dataset:
+
+```bash
+python train.py --config configs/hcr_moment.yaml
+python train.py --config configs/hcr_density.yaml
+python train.py --config configs/hcr_joint_pairwise.yaml
+python train.py --config configs/hcr_blockwise_joint.yaml
+python train.py --config configs/hcr_bidirectional_refinement.yaml
+```
+
+If your dataset is elsewhere, pass it explicitly:
+
+```bash
+python train.py --config configs/hcr_blockwise_joint.yaml --set data_path=path/to/text.txt
 ```
 
 Sample from a causal checkpoint:
@@ -111,12 +128,19 @@ Summarize distribution channels:
 python analyze_uncertainty.py --checkpoint runs/hcr_moment/best.pt
 ```
 
+For quick debugging of a benchmark config without real data, opt into the
+fallback explicitly and treat the run as non-comparable:
+
+```bash
+python train.py --config configs/transformer_baseline.yaml --set allow_fallback_dataset=true
+```
+
 ## Data
 
-By default, configs use `dataset: tiny_shakespeare`. If
-`data/tiny_shakespeare.txt` exists, it will be used. Otherwise the code falls
-back to a tiny built-in public-domain Shakespeare excerpt so the training loop
-can run without network access.
+By default, benchmark configs use `dataset: tiny_shakespeare` and require
+`data/tiny_shakespeare.txt`. The tiny built-in public-domain Shakespeare excerpt
+is allowed only for smoke/debug configs, because it is too small for benchmark
+runs and will be memorized quickly.
 
 For a real run, create:
 
@@ -129,6 +153,15 @@ or set:
 ```yaml
 data_path: path/to/text.txt
 ```
+
+For offline debugging only:
+
+```yaml
+allow_fallback_dataset: true
+```
+
+Training logs include `dataset_source`, `dataset_chars`, `train_windows`, and
+`val_windows`; treat runs with the built-in fallback as smoke tests only.
 
 ## Outputs
 

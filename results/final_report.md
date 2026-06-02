@@ -74,6 +74,14 @@ Smoke checks used:
 For real experiments, place `data/tiny_shakespeare.txt` or set `data_path` in a
 config and increase `max_steps`.
 
+Important correction from a later full baseline run: without
+`data/tiny_shakespeare.txt`, the old benchmark config silently used the built-in
+fallback excerpt. That run memorized the tiny train fragment immediately
+(`loss` near zero) while validation loss climbed above `8`, so it is not a valid
+baseline. Benchmark configs now set `allow_fallback_dataset: false`, and the
+trainer logs dataset source, character count, and train/validation window
+counts.
+
 ## 5. Smoke Results
 
 | Model | Params | Task | Steps | Val loss | ECE | Extra state signal |

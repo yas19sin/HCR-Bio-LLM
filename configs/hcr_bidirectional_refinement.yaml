@@ -1,5 +1,6 @@
 model_type: hcr_bidirectional_refinement
 dataset: tiny_shakespeare
+allow_fallback_dataset: false
 output_dir: runs/hcr_bidirectional_refinement
 task: denoising
 context_length: 128
@@ -22,4 +23,3 @@ grad_clip: 1.0
 return_steps: true
 variance_noncollapse_weight: 0.0001
 basis_entropy_weight: 0.0001
-
