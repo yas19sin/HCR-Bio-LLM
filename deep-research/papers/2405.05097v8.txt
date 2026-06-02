@@ -1,0 +1,1433 @@
+
+
+===== PAGE 1 =====
+1
+Biology-inspired joint distribution neurons
+based on Hierarchical Correlation Reconstruction
+for multidirectional propagation of values and densities
+Jarek Duda, Jagiellonian University, Cracow, Poland,jaroslaw.duda@uj.edu.pl
+Abstract—Recently a million of biological neurons (BNN) has
+turned out better from modern RL methods in playing Pong [1],
+reminding they are still qualitatively superior e.g. in learning,
+flexibility and robustness - suggesting to try to improve current
+artificial e.g. MLP/KAN for better agreement with biological. There
+is proposed extension of KAN approach to neurons containing model
+of local joint distribution:ρ(x) = P
+j∈B ajfj(x)forx∈[0,1] d,
+adding interpretation and information flow control to KAN, and
+allowing to gradually add missing 3 basic properties of biological:
+1) biological axons propagate in both directions [2], while current
+artificial are focused on unidirectional propagation - joint distribution
+neurons can repair by substituting some variables to get conditional
+values/distributions for the remaining. 2) Animals show risk avoid-
+ance [3] requiring to process variance, and generally real world
+rather needs probabilistic models - the proposed can predict and
+propagate also distributions as vectors of moments: (expected value,
+variance) or higher. 3) biological neurons require local training, and
+beside backpropagation, the proposed allows many additional ways,
+like direct training, through tensor decomposition, or finally local
+and promising: information bottleneck. Proposed approach is very
+general, can be also used as extension of softmax in embeddings of
+e.g. transformer or JEPA, suggesting interpretation that features are
+mixed moments of joint density of real-world properties.
+Keywords: artificial/biological neural networks, machine learn-
+ing, Kolmogorov-Arnold Network, joint/conditional distribution,
+tensor decomposition, mutual information, information bottleneck,
+HSIC, softmax, embedding, transformer, JEPA
+I. INTRODUCTION
+Just connecting a million of biological neurons to electrodes,
+turned out better from modern Reinforcement Learning method in
+playing Pong [1] or recently Doom 1, reminding that biological
+neurons still have qualitative superiority, especially in learning,
+flexibility and robustness, summarized further in Fig. 3. There are
+low level approaches to catch up like spiking neural networks [4],
+however, with energy efficiency as nearly the only success. Bi-
+ological neurons might be too complicated for practical direct
+modelling: they work in bursts of spikes, which annihilate when
+meet, traveling through complex networks in all directions.
+Therefore, to catch up with BNNs, it seems more promising
+to search for higher level MLP[7]/KAN[6]-likelogical neurons
+- trying to extract mathematics hidden in biological neurons,
+asking if it is e.g. matrix multiplication-like. To understand this
+mathematics, we focus on 3 fundamental differences, summarized
+in Fig. 1: uni-directional vs bi-directional propagation of biological
+axons [2], working only on values vs also on distributions -
+observed in animals e.g. as risk avoidance [3], and finally BNNs
+need local training approaches like looking the most promising:
+information bottleneck ([5], [8], [9]).
+Neurons containing local joint distribution modelwould
+allow to include above features of BNNs, by substituting some
+1https://www.newscientist.com/article/2517389-human-brain-cells-on-a-chip-
+learned-to-play-doom-in-a-week/
+Figure 1. Like in MLP/KAN approach, we search forlogical neuronssupposed
+to extract essential mathematics hidden in biological neurons - focusing on
+their usually missing 3 properties: bidirectional propagation [2], also working
+of distributions e.g. for observed risk avoidance [3], and using local training
+like information bottleneck [5]. All 3 are natural forneurons containing joint
+distribution model, practical with HCR approximating joint density as a linear
+combination:ρ(x) = P
+j∈B ajfj(x)fora j moments as neuron parameters.
+Figure 2. Basic formulas and example ford= 2variables HCR neuron, using
+convenient variable normalization to nearly uniform in[0,1].Neuron contains
+matrix of moments:a ij (generally orderdtensor), allowing to propagate in
+various directions by substituting some variables and normalizing to get estimated
+conditional density for the remaining - just permuting indexes to change propa-
+gation direction. For value propagation we can take expected value, what restricts
+prediction to 1-st moment - becoming summation of trained polynomials like in
+KAN[6], allowing to view HCRNN as extension of KAN e.g. for optional density
+propagation and change of propagation direction. Additionally, sucha ij parameters
+are actual moments allowing for better interpretation, and inexpensive estimation
+of mutual information - for training or monitoring of information flow.
+variables allows to predict and propagate conditional probabil-
+ities - what seems crucial for animals to operate in complex
+physical world, in practice being probabilistic. If only in reach
+at a reasonable cost, evolution should provide organisms ways
+to predict conditional distributions, preferably also propagating
+uncertain information through neural networks.
+However, modelling joint distributions is generally quite dif-
+ficult - for practicality needs to be simplified as possible, like
+representation ofjoint density as just a linear combinationlike
+polynomial, of conveniently normalized variables - we refer to
+arXiv:2405.05097v8  [cs.LG]  18 May 2026
+
+
+===== PAGE 2 =====
+2
+Figure 3. Summary of differences between artificial (ANN) and bi-
+ological neural networks (BNN, based on https://www.geeksforgeeks.org/
+difference-between-ann-and-bnn/) -BNNs are qualitatively superior in terms
+of learning, flexibility and robustness - just increasing the number of neurons
+might be insufficient to catch up. To build ANNs closer to BNN capabilities, we
+should include their neuron-level properties, summarized in Fig. 1, allpossible for
+neurons containing local joint distribution model- allowing to build models of
+the world, which in practice is probabilistic.
+Figure 4. Simple 2/3D examples from HCRNN Wolfram notebook of propagation
+in any direction based on the shown datasets (points) as conditional expected values,
+here being degreem= 8polynomials.
+as HCR, leading to simple formulas with e.g. just matrix/tensor
+products as in Fig. 2, 5 - relatively inexpensive calculations,
+suggesting biological neurons might hide similar representation.
+HCR stands for Hierarchical Correlation Reconstruction, and
+has already found many applications ([10], [11], [12], [13], [14],
+[15]) - allowing to hierarchically decompose dependencies into
+mixed momentsa j, predict and propagate them - here extended
+into neural networks as HCRNN 2 we focus on in this article.
+While this approach can be also viewed as just parametrization,
+also allowing backpropagation training, it additionally allows many
+other training ways - briefly summarized in the bottom of Fig. 5.
+E.g. having all neuron connections we could directly estimatea j
+moments between them, or update their current model. Working
+on joint distributions with easy to estimate mutual information,
+2HCR introduction: https://community.wolfram.com/groups/-/m/t/3017754,
+HCRNN application: https://community.wolfram.com/groups/-/m/t/3241700
+Figure 5. The proposed HCR neuron and neural network (HCRN, HCRNN)
+containing local joint distribution model represented in(a j)j∈B tensor, e.g.
+(aijk )i,j,k∈{0,..,m} ford= 3connections.Top: used orthonormal polynomial
+basis for uniform weight in[0,1], convenient for such normalization to quantiles.
+Middle: HCR neuron containing and applying joint distribution model like in Fig.
+2, but ford= 3variables, and gathered formulas for direct estimation/model
+update, entropy/mutual information, conditional densities and their expected values
+for propagation. Suchρdensity parametrization can drop below 0, what is usually
+repaired by calibration e.g. using normalizedmax(ρ,0.1)density. However,
+for neural networks its approximations should be corrected by training, hence
+we neglect calibration essentially simplifying calculations to shown formulas.
+Propagating only expected values and normalizing, we can use only the marked
+nominators - as in KAN optimizing nonlinear functions (polynomial here) by
+including only pairwise dependencies (awith two nonzero indexes), extending
+to their products to consciously include higher order dependencies.
+Bottom: schematic HCR neural network and some training approaches of inter-
+mediate layers - which in HCR can be treated as values or their distributions
+(replacingf i(u)with itsi-th moment:
+R 1
+0 ρ(u)fi(u)du). There is also visualized
+tensor decomposition approach - estimate dependencies (e.g. pairwise) for multiple
+variables and try to automatically decompose it to multiple dependencies of a
+smaller numbers of variables with algebraic methods.
+we can use mentioned local information bottleneck approach -
+offering many improvements over previously used HSIC [16], [17],
+like much lower cost and better sensitivity. There is also possible
+training by tensor decomposition, extending SVD (singular value
+decomposition) - trying to automatically decompose larger joint
+distribution into multiple smaller ones.
+The discussed approach is very general - allowing e.g. to pre-
+dict or propagate densities as approximated vectors of moments:
+(expected value, variance) and optionally higher like skewness,
+kurtosis. It can be also used to modify standard approaches e.g.
+from value to density prediction, or softmax embedding-based like
+transformers: usually they predict single energy-like coefficientE
+to define probability with softmax: Pr∝exp(−E). However, if in
+embedding it represents e.g. age, single feature seems insufficient
+to describe our incomplete knowledge - in contrast to extension
+to features being (mixed) moment-like coefficientsa j ∼f j(x)
+describing (joint) densities of real properties.
+
+
+===== PAGE 3 =====
+3
+Figure 6. 2D example comparison oflocal basis KDE(kernel density estimation)
+vsglobal basis HCR(available code in HCR Wolfram notebook) modelling
+joint density for dataset as points shown on the right. Assumingρ= 1trivial
+joint density, we would get 0 log-likelihood evaluation (meanlg(ρ(x))over
+dataset). Training on a randomly chosen subset and calculating log-likelihood on
+the remaining subset (cross-validation), we can see local KDE barely exceed this 0
+for trivial model (best forϵ≈0.03kernel width), while global: using polynomial or
+trigonometric basis easily exceed it - they are able to extract crucial generalizing
+features. The highest found log-likelihood was form= 4polynomials - using
+popular 4 moments: expected value, variance, skewness and kurtosis. Intuitively,
+KDE assumes that new points will be close to the old points - what poorly
+generalizes, in contrast to global features like moments used by HCR.
+This article introduces to HCR from perspective of neural
+network applications, earlier suggested in [10], to be extended in
+future e.g. with practical realizations replacing MLP, KAN, or to
+extend current embedding-based architectures, like transformers or
+JEPA, to work with density-based (un)embedding.
+II. HCRNEURAL NETWORKS(HCRNN)
+This main Section introduces to HCR and discusses it as a basic
+building block for nextgen neural networks.
+A. Introduction to Hierarchical Correlation Reconstrution
+As in copula theory [18], it is convenient to usenormalization
+of variables to nearly uniform distribution in[0,1]. It requires
+transformation through cumulative distribution function (CDF):
+valuex→CDF(x)becomes its estimated quantile, e.g.1/2
+for median. This CDF can be modeled with some parametric
+distribution using parameters estimated from dataset e.g.x→
+CDFN(0,1)((x−E[X])/
+p
+var(X)) =CDF N
+
+E[X],
+√
+var(X)
+(x)
+for Gaussian distribution, or can be empirical distribution
+function (EDF):xbecomes its position in dataset rescaled to
+(0,1). For neural networks such normalization is usually made
+in batches [19], here needed to be used between layers (can be
+skipped in further linearization). In practice should be nearly
+constant between batches, approximated, parameterized e.g. by
+Gaussian, put into tables, inversed for backward propagation, etc.
+Fordnormalized variables:x∈[0,1] d, in HCR werepresent
+joint distribution as a linear combination, conveniently in some
+product basisB=B + ∪ {0}withf 0(x) =f 0(x) = 1:
+ρ(x) = 1 +
+X
+j∈B+
+ajfj(x) =
+X
+j∈B
+ajfj(x) =
+X
+j∈B
+aj
+dY
+i=1
+fji(xi)(1)
+Figure 7.Top: Visualized part of HCR polynomial[0,1]basis ind= 1dimension
+andf j(x) = Qd
+i=1 fji (xi)product bases ford= 2,3. E.g. ford= 3the
+assumed joint density becomesρ(x, y, z) = P
+ijk aijk fi(x)fj (y)fk(z). As
+f0 = 1, zero index ina ijk means independence from given variable, hence
+a000 = 1corresponds to normalization,a i00, a0i0, a00i fori≥1describe
+marginal distributions throughi-th moments. Thena ij0 , ai0j , a0ij fori, j≥1
+describe pairwise dependencies through mixed moments, and finallya ijk for
+i, j, k≥1describe triplewise dependencies. This way we literally gethierarchical
+correlation reconstruction through moments describing dependencies between
+increasing numbers of variables, with clear interpretation of coefficients of e.g.
+trained HCR-based neural network.Bottom: discussed further information theoretic
+view, allowing inexpensive estimation of e.g. mutual information as sum of square
+of nontrivial moments between two variables.
+whereB + =B\{0}removes zero corresponding to normalization
+asf 0 = 1, bold fonts denote vectors:j= (j 1, .., jd).
+Assuming orthonormal basis:
+R 1
+0 fi(x)fj(x)dx=δ ij static
+estimation[20] (minimizing mean-squared error between kernel
+density estimation smoothed sample and discussed parametriza-
+tion) from ¯Xdataset becomes just:
+aj = 1
+| ¯X|
+X
+x∈ ¯X
+fj(x) = 1
+| ¯X|
+X
+x∈ ¯X
+dY
+i=1
+fji(xi)(2)
+We assume hereorthonormal polynomial basis(rescaled Legen-
+dre), allowing to interpret coefficients as moments of normalized
+variables, being approximately cumulants, starting with:
+f0 = 1corresponds to normalization (3)
+f1(x) =
+√
+3(2x−1)∼expected value
+f2(x) =
+√
+5
+
+6x2 −6x+ 1
+
+∼variance
+f3(x) =
+√
+7
+
+20x3 −30x 2 + 12x−1
+
+∼skewness
+f4(x) = 3
+
+70x4 −140x 3 + 90x2 −20x+ 1
+
+∼kurtosis
+Independenta j estimation as just average allows to control
+uncertainty of the found parameters∝1/
+p
+| ¯X|.
+Alternatively we could use various trigonometric bases (e.g.
+discrete cosine/sine transform DCT/DST) - especially for periodic
+
+
+===== PAGE 4 =====
+4
+variables, localized like B-splines used by the original KAN, from
+wavelets, finite elements methods. Instead of normalization to
+uniform in[0,1], we could use a different one e.g. to Gaussian
+distribution, times Hermite polynomials for orthonormal basis.
+For discrete variables we can use one-hot encoding, or e.g. its
+SVD/CCA-based optimization as in [15].
+As in Fig. 7 andf 0 = 1,a j coefficients are mixed moments
+of{i:j i ≥1}variables of nonzero indexes, independent
+from variables of zero indexes, allowing for literallyhierarchical
+decompositionof statistical dependencies: start witha 0..0 = 1for
+normalization, add single nonzero index coefficients to describe
+marginal distributions, then add pairwise dependencies with two
+nonzero indexes, then triplewise, and so on. For examplea 2010
+coefficient would describe dependence between 2nd moment of 1st
+variable and 1st moment of 3rd variable amongd= 4variables.
+Generally the selection of basisBis a difficult question, e.g.
+to use only pairwise dependencies up to a fixed momentm,
+preferably optimized during training, maybe separately for each
+neuron or layer. Such decomposition also allows to efficiently work
+withmissing databy using to estimate/update/propagate onlya j
+coefficients with zero indexes for the missing variables, asj i = 0
+zero index means independence from given variable.
+While static estimation averages over dataset with equal weights,
+fordynamic updatingwe should increase weights of recent
+values, e.g. using computationally convenient exponential moving
+average (EMA) for some memory parameter0< η≪1:
+aj
+x=(x1,..,xd)
+− − − − − − − − →(1−η)aj +η
+Y
+i
+fji(xi)(4)
+However, modelling (joint) probability density as alinear
+combination can sometimes lead to negative densities- to
+avoid this issue, there is usually usedcalibration: instead of the
+modelled densityρ, use e.g.φ(ρ) = max(ρ,0.1)or softplus
+φ(ρ) =αln(1 +βexp(γρ))for someα, β, γ >0, and divide
+by integral to remain normalized density. However, it makes
+computations much more complex and costly, especially normal-
+ization, in higher dimensions - for neural network applications we
+usually should be able to ignore this issue to simplify calculations,
+especially working on expected values and normalizing between
+layers - its approximations should be compensated in training.
+Therefore, we mostly neglect this issue/calibration in this article,
+however, it should be remembered and is discussed in Section IV,
+maybe including calibration with proportional normalization over
+possibilities like softmax:
+Pr(x) = φ(ρ(x))P
+y∈X φ(ρ(y)) ∝φ(ρ(x))(5)
+B. Conditional distributions and expected value propagation
+Having (1) model of joint distribution, to getconditional
+distributionwe need to substitute known variables, and normalize
+dividing by integral, being 0-th coefficient to makea 0 = 1:
+ρ(x1|x2, . . . , xd) =
+P
+j ajfj1(x1)fj2(x2). . . f jd(xd)
+R 1
+0
+P
+j ajfj1(x1)fj2(x2). . . f jd(xd)dx1
+=
+=
+X
+j1
+fj1(x1)
+P
+j2...jd
+aj1j2..jd fj2(x2). . . f jd(xd)P
+j2...jd
+a0j2..jd fj2(x2). . . f jd(xd) (6)
+as
+R 1
+0 fi(x)dx=δ i0. Such sums for pairwise dependencies use
+only two nonzeroj i indexes (input-output), three for triplewise,
+and so on. Denominator corresponds to normalization, indeed the
+Figure 8. KAN-like example with code from HCRNN Wolfram notebook: trying
+to findf(x) = exp(x 2
+1 −x 2
+2 −x 3
+3 +x 4
+4)from size 1000 random dataset, using
+single neuron and direct estimation. We can see it has automatically found the four
+polynomials hidden behind exponent, however, they are deformed as having values
+normalized to[0,1]range.
+fraction becomes 1 forj 1 = 0. Examples ford= 2,3are shown
+in Fig. 2, 5 - generally nominator sums over all indexes with
+the current indexes of predicted variables. Denominator replaces
+current variables indexes with zeros for normalization, can be
+removed if having further (inter-layer) normalization.
+Here is example of analogous prediction of conditional joint
+distributions for multiple (2) variables:
+ρ(y, z|x) =
+X
+jyjz
+fjy(y)fjz(z)
+P
+jx ajxjyjz fjx(x)P
+jx ajx00 fjx(x)
+Working on expected values would removey−zmixed moments,
+makingE[y, z|x] =E[y|x]E[z|x](can be different for density).
+Having such conditional distribution, we can for example
+calculate expected value e.g. to be propagated by neural net-
+works. For polynomial basisexpected valuesof contributions
+are:
+R 1
+0 xf0(x)dx= 1/2,
+R 1
+0 xf1(x)dx= 1/
+√
+12, and zero for
+higher moments, leading to formulas including onlyi= 0,1
+normalization and the first moment as in Fig. 5, e.g.:
+E[x|y, z] =
+Z 1
+0
+x ρ(x|y, z)dx= 1
+2 + 1√
+12
+P
+jk a1jk fj(y)fk(z)P
+jk a0jk fj(y)fk(z)
+(7)
+As further there is rather required CDF normalization which both
+shifts and rescales, in practice it is sufficient to work on such
+nominators, marked in Fig. 5, 2.
+Restricting it to pairwise dependencies: (single variable of input
+- single variable of output), similarly to KAN we get summation of
+trained 1-parameter functions: here polynomials (could be different
+e.g. B-splines like in KAN) + e.g. approximate fixed CDF for
+normalization:E[x|y, z]∝
+X
+jk
+a1jk fj(y)fk(z)
+pairwise only
+− − − − − − − →
+KAN-like
+X
+j
+a1j0fj(y) +a 10jfj(z)(8)
+
+
+===== PAGE 5 =====
+5
+Figure 9. Basic HCR-like improvement of polynomial KAN by just replacing stan-
+dard rescaling normalization with CDF/EDF, what assuming Gaussian distribution
+means just adding fixed CDF N(0,1) after standard: mean subtraction and division
+by standard deviation. At the top we can see that such quantile normalization
+leads to more uniform distribution - allowing for better representation with low
+degree polynomials, which are better at generalization. At the bottom there are
+results from [21] showing such improvements in cross-validation on MNIST for
+low degree polynomials. For high degree rescale can be better, but their larger
+number of parameters is more likely to overfit.
+However,in comparison to KAN, using the proposed HCRNN
+parametrization we get multiple advantages:
+•it canpropagate in any direction(as BNNs),
+•propagate values orprobability distributions(as BNNs),
+•interpretation of parameters asmixed moments,
+•consciously addtriplewise and higher order dependencies,
+•inexpensive evaluation of modeledmutual information,
+•additional trainingways (needed for BNNs), e.g. direct
+estimation, tensor decomposition, information bottleneck.
+KAN-like setting as using conditional expected values would
+include only(a i1)i type coefficients - multipleipowers of inputs
+to predict 1-st moment of output. Reversing propagation direction,
+it would predict multiple moments as linearly dependent from
+value. For more sophisticated dependencies and multidirectional
+density propagation, we would need to include and train also
+(aij)ij dependencies between higher moments.
+Figure 8 shows single neuron example learning 4 variable
+function from sample. Figure 9 shows results from [21] regarding
+the simplest KAN upgrade by just replacing normalization from
+rescaling to CDF/EDF. Fig. 10 shows prediction of conditional
+distributions from [22] by separate predictions of multiple condi-
+tional moments - can be uses as the last layer of e.g. KAN, or
+different neural network e.g. for embedding - as a few conditional
+moments representing its probability distributions.
+C. Propagation of probability densities as vectors of moments
+Let us start with a simple example: that we would like to
+calculate conditional probability density like previously:
+ρ(x|y) =
+X
+i
+fi(x)
+P
+j aijfj(y)P
+j a0jfj(y) (9)
+Figure 10. Example of direct prediction of conditional distribution from [22]
+- here using separate linear regressions for 1st and 2nd momenta j with found
+coefficients visualized at the bottom, from which we getρ(x) = P
+j aj fj (x)
+density as polynomial, further requiring calibration to enforce positive density, and
+finally normalization can be reverted. We get interpretation by contributions to
+moments, can evaluate variables by relevance: conditional entropy if predicting
+from single variable, or novelty: entropy drop if removing single variable from
+their entire set. While least square linear regression was used, it can be naturally
+extended to neural networks with MSE estimation of conditional moments, e.g. in
+the last layer of network originally predicting values, or calculating embeddings
+e.g. in transformer by a few moments representing its probability distribution.
+but now forybeing fromρ(y) = P
+k bk fk(y)probability
+density. So thepropagated probability densityofxshould
+be
+R 1
+0 ρ(x|y)ρ(y)dy. Approximating with constant denominator,
+using
+R 1
+0 fj(y)fk(y)dy=δ jk and finally normalizing, we get:
+ρ(x)←
+Z 1
+0
+ρ(x|y)ρ(y)dy≈
+X
+i
+fi(x)
+P
+j aijbj
+P
+j a0jbj
+(10)
+Suchconstant denominator approximationallows to propa-
+gate (in any direction) through HCR neurons not only values, but
+also entire probability distributions - by just replacingf j(y)for
+concrete value ofy, withb j describing its probability distribution.
+It is natural to generalize, e.g. forρ(x|y, z)we could replace
+fj(y)fk(z)withb jk whenρ(y, z) = P
+jk bjk fj(y)fk(z):
+X
+i
+fi(x)
+P
+j aijk fj(y)fk(z)P
+j a0jk fj(y)fk(z)
+value
+⇆
+density
+X
+i
+fi(x)
+P
+j aijk bjk
+P
+j a0jk bjk
+D. Tensor decomposition and linearization fora j ∼f j(x)
+Analogously for intermediate layers like in bottom of Fig. 5:
+Ak
+i1i2i3i4 ≈
+X
+j1,j2
+aj1
+i1i2 bj2
+i3i4 ck
+j1j2 as
+ck
+j1,j2
+Σj1 ∧Σ j2
+aj1
+i1i2 bj2
+i3i4
+integrating over the intermediate variables, approximating with
+constant denominator and normalizing at the end, thanks to basis
+orthogonality we get Kronecker deltas enforcing equality of inter-
+mediate indexes, leading to condition for approximation of higher
+order tensors with lower order ones, which is generally studied by
+tensor decompositionfield [23] generalizing SVD (singular value
+decomposition) - what might lead to better training approaches.
+We can also extend it with nonlinearities to neural networks -
+optimizing final evaluation, e.g. MSE conditional moments or log-
+likelihood, at worst it will lead to linear.
+
+
+===== PAGE 6 =====
+6
+While neural networks require nonlinearity, such tensor ap-
+proach allows tolinearizeits intrinsic behavior: calculate non-
+linearities in some basis e.g. polynomials only for the outer
+inputs/outputs(f j(x) :j∈B,x∈ ¯X), including multivariate
+dependencies. Then treat the entire neural network as a linear
+transformation of such features (normalization only at both ends -
+no need for inter-layer), e.g. just changing indexes (like transpo-
+sition) to modify propagation direction. However, it contains this
+constant denominator approximation, and it would become a tensor
+of exponentially increasing size if including all dependencies -
+it should be combined with reductions like tensor decomposition
+(into neural network), information bottleneck - working on linear
+approximations to reduce dimension.
+E. Basis optimization and selection
+Another direction is application of the founda j coefficients, for
+example to optimize the arbitrarily chosen{f i}basis to be able
+to reduce the number of considered coefficients, also to reduce
+overfitting issues, e.g. discussed in [15], [24]. For this purpose
+we can for example treat the current coefficients as a rectangular
+matrixM j1,(j2..jd) :=a j - with blocked all but one indexes
+for all the considered coefficients in the basis. Now we can
+use SVD(singular value decomposition)/CCA: find orthonormal
+eigenbasis ofM M T =P
+i σiuiuT
+i and useg i =P
+j uijfj as the
+new basis for one or a few dominant eigenvectors. Similarly we
+can do for the remaining variables, getting separate or common
+optimized basesfor them.
+A more difficult question isbasis selection- whichj∈B
+indexes to use in considered linear combinations for each neuron.
+Extending all tom-th moment/degree fordvariables, we would
+need(m+ 1) d =Pd
+k=0
+d
+k
+
+mk coefficients: 1 for normalization,
+dmfor marginal distributions,d(d−1)m 2/2for pairwise, and so
+on. With proper normalization the coefficients for marginal distri-
+butions should be close to 0 - can be neglected. To reduce number
+of coefficients we can e.g. restrict up to pairwise dependencies
+(≈KAN), and/or restrict summed indexes (instead of individual):P
+i ji ≤m(polynomial degree). Generally we can calculate more
+coefficients and discard those close to zero in training, maybe use
+l1 normalization to find such sparse basis. Using optimized bases
+as above should allow to reduce|B|size.
+F . Some HCRNN training approaches
+A single HCR neuron models multidimensional joint distribu-
+tion, what is already quite powerful. However, for neural networks
+the main difficulty is training of the intermediate layers. HCRNN
+is very flexible also here, below are some approaches:
+•Treat HCRNN as just a parametrization and use standard
+backpropagation as for MLP, KAN, e.g. with some dis-
+tance for values, or log-likelihood evaluation for density
+propagation. It can be mixed with other techniques, e.g.
+static parameter estimation/update from recent values, online
+basis optimization and selection, or just optimizing initial
+parameters to improve further main optimization.
+•Maybe find initial intermediate values by dimensionality
+reduction like PCA of{f j(x) :j∈B}vectors of features as
+(nonlinear) products of functions of inputs - further extended
+into information bottleneck approach.
+•Maybe use propagation in both directions and combine with
+direct coefficient estimation/update (2).
+•Maybe use some tensor decomposition techniques - start with
+estimation of dependencies for a larger set of variables, and
+use algebraic methods to try to approximate it with multiple
+lower order tensors.
+•information bottleneck approachlocal and looking the most
+promising we discuss further - optimizing joint distributions
+between layers, hence perfect for neurons with local joint
+distributions models we focus on.
+Coefficients of such trained HCRNN remain mixed moments
+- providing dependency interpretation between input/output, and
+hidden intermediate variables, allowing for multidirectional prop-
+agation of values or distributions like in Fig. 17, and its parameters
+can be further continuously updated e.g. using (4).
+III. INFORMATION BOTTLENECK BASED TRAINING
+Let us considerlhidden layer neural network intended to predict
+YfromXwith{θ i}i=0..l sets of parameters:
+X
+θ0
+− →T1 θ1
+− →. . .
+θl−1
+− − − →Tl θl
+− →ˆYpredictingY(11)
+While the standard training approach is focused on optimization
+of neuron parametersθused to process the data, alternatively we
+could try todirectly optimize content ofT i hidden/intermediate
+layers, in practice: dataset processed through some of layers (here
+could be in both directions) - like in image recognition: first
+layers extract low level features like edges, then some intermediate
+features, and finally e.g. faces.
+Information bottleneck approach([5], [9]) suggests how
+to directly optimize the content of intermediate layers. It uses
+information theory- offering nearly objective evaluation, being
+invariant to variable permutations and bijections:mutual infor-
+mationI(X;Y) =H(X) +H(Y)−H(X, Y), being the number
+of bits (or nits)Xon average brings aboutY, orYaboutX.
+Optimizing intermediate layer ofX→T→Y, obvi-
+ously it should maximize information about the predictedY:
+maxT I(T;Y). However, focusing only onpredictionwould
+rather lead to overfitting. To prevent it, we can also perform
+compression: minimizemin T I(X;T)- removing unnecessary
+information/noise from the input. Finally, information bottleneck
+approach, for someβ >0, assumes optimization of both:
+inf
+T
+(I(X;T)−βI(T;Y))(12)
+A. Information theory view on HCR
+Mutual information has excellent properties: independence to
+variable permutation and bijections, says how many bits one
+variable gives on average about the second. However, it is rel-
+atively difficult to calculate, requires a joint distribution model
+- HCR does asρ(x) = P
+j∈B aj fj(x). Using natural logarithm
+(information in nits) with 1st order approximationln(1 +a)≈a,
+and orthogonality of basis, we get simple practical approximation
+ofentropy, formally alldifferential of normalized variables:
+H(X) =−
+Z
+[0,1]d
+ρ(x) ln(ρ(x))dx≈ −
+X
+j∈B+
+(aj)2 (13)
+Analogously forcross entropywithρ b(x) =P
+j∈B bj fj(x):
+−
+Z
+[0,1]d
+ρ(x) ln(ρb(x))dx≈ −
+X
+j∈B+
+ajbj
+
+
+===== PAGE 7 =====
+7
+For joint distribution of(X, Y)variables (can be multivariate),
+denotingB X , BY as bases used for individual variables, such
+approximate formula forjoint entropybecomes:
+H(X, Y) =−
+X
+(jx,jy)∈BX ×BY \{0}
+
+a(jx,jy)
+2
+(14)
+ForH(X|Y)conditional entropywe subtractH(Y), correspond-
+ing to{0} ×B +
+Y summation indexes, leavingB +
+X ×B Y :
+H(X|Y) =H(X, Y)−H(Y)≈ −
+X
+jx∈B+
+X
+X
+jy∈BY
+
+a(jx,jy)
+2
+Finally formutual informationwe remove first row and column:
+I(X;Y) =H(X)+H(Y)−H(X, Y)≈
+X
+jx∈B+
+X
+X
+jy∈B+
+X
+
+a(jx,jy)
+2
+(15)
+hence, as in Fig. 7, thisln(1 +a)≈aapproximation allows to
+evaluate mutual information by just summing squared nontrivial
+coefficients: mixed moments between the two variables.
+However, as discussed in [25], square of estimated mean is
+larger than square of mean by variance divided by sample size
+n, suggestingcorrected mutual information estimator:
+Ic( ˆX; ˆY) =
+X
+j∈B+
+X
+X
+k∈B+
+Y
+
+mean(fj(x)fk(y))2 − var(fj(x)fk(y))
+n
+
+(16)
+B. Kernel formulation like HSIC independence test
+Let us now go toward HSIC [26] kernel formulations,
+for simplicity without the above correction. Denoting
+{xi}i=1..n,{y i}i=1..n as the current batch from sizendata
+sample, denote
+¯X= 1√n(fj(xi))i=1..n,j∈B +
+X
+¯Y= 1√n(fj(yi))i=1..n,j∈B +
+Y
+(17)
+asn× |B +
+X |, n× |B +
+Y |matrices containing features of vectors
+from the batch -values in the chosen basis(e.g. with only single
+nonzero indexes for KAN-like).
+Figure 11. While HSIC (Hilbert-Schmidt Information Criterion) e.g. ininfor-
+mation bottleneck training[17] usually uses Gaussian kernel, proposed HCR
+approach can be also viewed as kernel method - we can see better localized in
+diagonal of[0,1] 2 for normalized variables. While HSIC has infinite number of
+Gaussian centers, in HCR we use finite basis - allowing to avoid multiplication of
+n×nmatrices for sizendata sample ofO(n 3)or currently the lowestO(n 2.37)
+time complexity, reducing it to linearO(n|B|)forBchosen basis.
+Having above ¯X, ¯Ymatrices of features, we can directly MSE
+estimate (2) parameters for allB +
+X ×B+
+Y pairs formingθ XY matrix.
+Using∥A∥ 2
+F =P
+ij(Aij)2 =Tr(AA T )and Tr(AA ′) =Tr(A ′A),
+mutual information (15) becomes:
+θXY := (a(jx,jy) :j x ∈B +
+X ,j y ∈B +
+Y ) = ¯X T ¯Y
+I(X;Y)≈ ∥ ¯X T ¯Y∥ 2
+F =Tr
+ ¯X T ¯Y( ¯X T ¯Y) T
+=Tr(C X CY )
+forn×nkernels:C X = ¯X ¯X T CY = ¯Y ¯Y T (18)
+containing scalar products of points in batch as vectors of features.
+If subtracting the means earlier, they resemble covariance matrices
+of the used features - this subtraction might be worth including,
+but generally the means should be close to zero. Also, instead of
+covariance matrix, this is rathern×nsimilarity matrix inside the
+sizenbatch using the chosen features.
+Figure 11 shows some their values and comparison with Gaus-
+sian kernel popular in HSIC, then Fig. 12 shows their simple
+benchmark for the original application: independence test, where
+HCR turned out not only more sensitive to dependencies, and
+actually allowing to provide their descriptions, but is also much
+cheaper - allowing to avoid costly multiplication ofn×nkernels
+by directly usingI(X;Y)≈ ∥ ¯X T ¯Y∥ 2
+F formula ofO(n|B +
+X ||B+
+Y |)
+cost of mainly estimation.
+Figure 12.Independence test HSIC vs HCR comparisonfrom [25] - we
+independently generate 2 data samples from bimodal distribution and introduce
+dependence by rotating it 0, 1, 2, 3, 4, 5 degrees (top). In HCR we model their
+joint distribution as polynomial - there are shown such density models and their
+|B|= 4×4 = 16coefficients form= 4. To distinguish signal from noise, these
+moments can be normalized toN(0,1)assumingindependence hypothesis, hence
+we can use normality test for such 16 coefficients. The most promising turned out
+testing the lowest and the highest (showing main dependencies), comparing them
+with distributions of these extreme values for 16 i.i.d.N(0,1)variables. Here it
+turned outmuch more sensitive to dependencies than HSIC, also much less
+computationally expensive, and additionally providing description of the found
+dependencies.
+
+
+===== PAGE 8 =====
+8
+C. Gradient descent optimization of information bottleneck
+The previous version of this article contains analytical solution
+for linear case, but in practice such training rather requires gradient
+as in HSIC articles ([16], [17]) we will focus on.
+DenoteX
+θXT
+− − − →T
+θT Y
+− − − →Yas the values in 3 consecutive layers:
+ofn×n X,n×n T ,n×n Y dimensions fornsize of dataset and
+nX , nT , nY numbers of neurons. The optimizedθcoefficients are
+linear dependencies between moments. For simplicity we assume
+being fully connected, in other case we can considerX→T→Y
+triples e.g. for individual neurons inT, with its connections inX
+andY.
+For nonlinearities we find values in the basis:
+n×n T mmatrix: ¯Tm = 1√n(fp(ti
+j))i=1..n,(j,p)∈(1..n T )×(1..m)
+and the same for ¯Xm, ¯Ym. Generally we can use different basis
+toward left and right: ¯TI for input and ¯TO for output for some
+natural numbersI, O≥1, which generally can vary between
+layers and neurons. It meansOmoments of deeper/earlier layer
+are used to predictImoments of further layer, or the opposite if
+reversing propagation direction.
+For KAN-like propagation of expected values we can choose
+I= 1, or higher for propagation of probability distributions, e.g.
+I=Obeing 2 to include variances, 3 skewness, 4 kurtosis.
+While KAN here is unidirectional ”multiple moments→expected
+value” propagation, coming from HCRNN we can still reverse its
+direction - directly using ”expected value→multiple moments”.
+We would like to optimize ¯Tcontent of intermediate layer:
+¯XO
+θXT = ¯X T
+O ¯TI
+− − − − − − − − →
+
+¯TI
+f1..I
+← − − −¯T
+f1..O
+− − − →¯TO
+ θT Y = ¯T T
+O ¯YI
+− − − − − − − →¯YI (19)
+whereθ XT = ¯X T
+O ¯TI andθ T Y = ¯T T
+O ¯YI are directly MSE estimated
+parameters.
+The chosen basis leads to mutual information approximation:
+I(X;T)≈Tr(C XO CTI )I(T;Y)≈Tr(C TO CYI )(20)
+which can be used e.g. forinformation bottleneck formula:
+inf
+(ti
+j):i=1..n, j:1..nT
+(Tr(CXO CTI )−βTr(C TO CYI ))(21)
+Let us find formula for this gradient starting withC T , CTm, for
+fp the considered orthonormal basis,p= 1, . . . , m:
+∂(CT )kl
+∂ti
+j
+= ∂( ¯T ¯T T )kl
+∂ti
+j
+= ∂P
+a tk
+atl
+a
+n ∂ti
+j
+= δiktl
+j +t k
+j δil
+n
+∂(CTm)kl
+∂ti
+j
+=
+∂P
+ap fp(tk
+a)fp(tl
+a)
+n ∂ti
+j
+=
+∂Pm
+p=1 fp(tk
+j )fp(tl
+j)
+n ∂ti
+j
+=
+=
+Pm
+p=1 δikf ′
+p(ti
+j)fp(tl
+j) +f p(tk
+j )δilf ′
+p(ti
+j)
+n
+Mutual information e.g. betweenXandTis approximated as
+Tr(CX CT )with derivative (using symmetry ofC X = (CX)T ):
+∂Tr(CX CT )
+∂ti
+j
+= ∂P
+kl CXkl CT kl
+∂ti
+j
+=
+X
+kl
+CXkl
+δiktl
+j +t k
+j δil
+n =
+= 1
+n
+X
+l
+CXil tl
+j + 1
+n
+X
+k
+CXki tk
+j = 2
+n
+X
+k
+CXik tk
+j = 2√n(CX ¯T) ij
+ 
+∂I(X;T)
+∂ti
+j
+≈
+!
+∂Tr(C X CTm)
+∂ti
+j
+=
+X
+kl
+CXkl
+∂(CTm)kl
+∂ti
+j
+=
+= 2
+n
+X
+kp
+CXik fp(tk
+j )f ′
+p(ti
+j) = 2√n
+mX
+p=1
+(CX ˜Tp)ij f ′
+p(ti
+j)
+forn×n T matrix ˜Tp = 1√n(fp(xi
+j))i=1..n,j=1..nT containing
+single power, whilen×mn T matrix ¯Tm contains all ˜Tp=1..m.
+Denoting ˜T ′
+p = 1√n(f ′
+p(ti
+j))i=1..n,j=1..nT , the above become coor-
+dinatewise matrix multiplication.
+The final gradient of optimized (21) information bottleneck
+function, also extendingC XO = ¯XO ¯X T
+O , CYI = ¯YI ¯Y T
+I (e.g. to
+reduce cost by multiplying by ˜Tp first), becomes:
+∂(Tr(C XO CTI )−βTr(C TO CYI ))
+∂ti
+j
+=(22)
+2√n
+ IX
+p=1
+
+¯XO ¯X T
+O ˜Tp
+
+ij
+f ′
+p(ti
+j)−β
+OX
+p=1
+
+¯YI ¯Y T
+I ˜Tp
+
+ij
+f ′
+p(ti
+j)
+!
+where generally there can be used variousI, Obasis size for
+different layers, neurons. Above multiplications could use e.g.
+( ¯XO ¯X T
+O) ˜Tp or ¯XO ( ¯X T
+O ˜Tp)bracketing - while the former uses
+n×nkernel, the latter is less expensive over basis - allowed for
+HCR, but not HSIC.
+For practical trening we need to split dataset into batches
+applied multiple times (epochs) in some sequence, e.g. starting
+with random initial values of weights/intermediate layers. There
+is a large freedom to choose training details, where we can apply
+two philosophies:
+1) Modification of weights based on gradients:We can use the
+formulas for weight estimation from given batch:θ XT = ¯X T
+O ¯TI,
+θT Y = ¯T T
+O ¯YI, for example to update the actually used weights ¯θ,
+e.g. with exponential moving average: ¯θ+ =η(θ− ¯θ). Alternatively
+we can use the foundg ij =∂ tij gradient, and apply it to modify
+parameters using ¯T→ ¯T−αg.
+2) Modifying content of intermediate layers:We could use this
+gradient to directly modify contents of intermediate layers cor-
+responding to datapoints. However, as such normalized variables
+have to stay in[0,1]range, direct use of gradient descent method
+could easily leave this range. To prevent that, we can for example
+stretch the variable to(−∞,∞)for gradient descent step, e.g.
+withs=CDF −1(t), t=CDF(s)using CDF of e.g. Gaussian
+distribution, transforming these hidden variables to this distribu-
+tion. Derivative over the stretched variablesneeds just additional
+multiplication by its PDF:∂L(CDF(s))/∂s=L ′(t)CDF ′(s).
+IV. CALIBRATION ALSO INCLUDING NORMALIZATION
+Modeling (joint) density as a linear combination, while being
+very convenient, has issue of sometimes getting below zero. In NN
+approaches we can usually neglect it, e.g. resulting approximations
+should be automatically compensated during training.
+However, especially for log-likelihood evaluation, its logarithm
+requires positive density, what can be achieved by calibration:φ:
+R→R + to reinterpret predicted density˜ρintoφ(˜ρ)>0, which
+can be automatically found from training data as in Fig. 13, 14.
+In practice there are used parameterized e.g.φ(v) =
+αmax(v, ϵ), soft-plus:φ(v) =αln(1 +βexp(γv))for some
+parameters likeαfor normalization. Here both high-dimensional
+behavior in Fig. 14, and further similarity with transformers
+suggest to also consider exponential, e.g.φ(v) =αexp(βv).
+However, then we should ensure normalization: divideφ(˜ρ)by
+integral over[0,1] d space. This integral in practice is approximated
+by summation over lattice ind= 1. In higher dimension we can
+go iteratively through coordinates: forρ(x 1), thenρ(x 2|x1)and so
+
+
+===== PAGE 9 =====
+9
+Figure 13. Example from [27] for predictedd= 1conditional densities to
+automatically find calibration functions or its parametrization from data: by diving
+(e.g. KDE) estimated density from dataset˜ρ(X), by density of all predictions
+˜ρ([0,1]d)e.g. in lattice. While here ford= 1suggestsφ θ parametrization as 3
+lines. In higher dimension in Fig. 14 this approach suggests exponential calibration.
+on, or Monte-Carlo approximating the integral by averaging over
+some large number of random points fromP ⊂[0,1] d.
+Such normalization is impractical e.g. for gradient descent. As
+in Fig. 10, we can separately MSE predict multiple conditional
+moments, and build conditional distribution from them. We might
+get better log-likelihood if training these predictors together,
+however, especially normalization of required calibration would
+rather make it impractical.
+Instead, we can include normalization in calibration dividing it
+by approximately constant
+R
+[0,1]d ˜ρ(x)dx, preferably also chosen
+to maximize log-likelihood forXdata sample:
+arg max
+φ:R→R+
+(
+1
+|X |
+X
+x∈X
+ln(φ(˜ρ(x))) :
+Z
+[0,1]d
+φ(˜ρ)(x)dx= 1
+)
+(23)
+In practice we should restrict to some parameterized familiesφ θ,
+also can approximate the normalization by averaging overPlattice
+or just (Monte-Carlo) set of random points in[0,1] d:
+arg max
+θ
+(
+1
+|X |
+X
+x∈X
+ln(φθ(˜ρ(x))) : 1
+|P|
+X
+x∈P
+φθ(˜ρ(x))) = 1
+)
+(24)
+For gradient descent we could regularity perform suchθoptimiza-
+tion, e.g. replacing above sums with weighted exponential moving
+averages, and useφ θ(˜ρ(x))as density (including normalization in
+αscaling parameter) for e.g. log-likelihood final evaluation.
+As mentioned in [27] and shown in Fig. 13, 14, we can also di-
+rectly estimate calibration function (or choose its parametrization)
+from data by dividing (e.g. KDE) estimated density from dataset
+˜ρ(X), by density of all predictions˜ρ([0,1] d)(or˜ρ(P)).
+V. EXTENDINGNNARCHITECTURES TO WORK ON DENSITIES
+Let us now discuss application of presented methodol-
+ogy/philosophy to extend standard NN architectures usually work-
+ing on values, into working on, predicting probability densities.
+A. Density prediction and propagation
+A basic approach is modification of value predictor, into pre-
+diction of multiple conditional moments (e.g. extending last NN
+layer), and combine them into prediction of conditional (joint)
+probability density - like using separate linear regressions in Fig.
+10, maybe replacing it with neural network. It might be beneficial
+Figure 14. Example of direct HCR modelling of[0,1] 29 joint density as
+polynomial of normalized to[0,1]for log-returns of 2008-2018 daily prices of
+stocks of 29 DJIA companies.Top:29×29(symmetric) correlation-like moments
+form= 1, and form= 2additional2×29×29dependencies of variance
+with first (asymmetric) and second (∼homoscedasticity) moments.Bottom: while
+the above moments well describe pairwise dependencies, using them together
+for high dimensional joint distribution needs reinterpretation of predicted density
+referred as calibrationφ. Estimating it from data as in Fig. 13 here suggests
+φ(v) =αexp(βv)calibration, also further in Fig. 16 to agree with softmax.
+We can first findβmaximizing log-likelihood in (24), thenαfor normalization.
+to train conditional moments together (including dependencies)
+by evaluating the final density with log-likelihood (normalized: in
+[0,1] d), however, it requires e.g. normalized calibration (24).
+While the above can be extension of standard NN propagating
+values, as discussed in II-C we can also directly propagate densities
+e.g. approximately by just linear transformations there, which
+could be extended to nonlinearities, their neural networks, allowing
+them to operate/propage densities e.g. as vectors of moments.
+B. Density (un-)embeddings for e.g. transformers and JEPA
+Modern architectures like transformers [28] or JEPA [29] are
+based on embeddings, representing objects e.g. words asvectors
+of features, supposed to describe somereal-world properties.
+However, in practice we rather have probability distributions of
+such properties, which can be improved with further information,
+allowing to narrow probability distribution of e.g. age while
+reading some text, or medical parameters with further diagnostics -
+usually reducing variance. Ideally, we should start with probability
+distribution of the population, and try to improve its estimation
+with additional data. As in Fig. 15, we couldtry to enforce fea-
+tures e.g. transformer works on to represent (mixed) moments
+aj ≈E x[fj(x)]of real-world propertiesx.
+As discussed in II-C, propagation of densities as vectors of
+momentsa j ∼f j(x)can be realized already with linear operations,
+
+
+===== PAGE 10 =====
+10
+Figure 15.Top: embeddings are the basic tools of modern neural networks
+like transformers, representing various objects e.g. words as vectors, of parameters
+hopefully corresponding to real properties, like age. However, e.g. word ”adult”
+represents much larger age variance than ”toddler” - single feature like energy in
+softmax seems insufficient to describe this property, requiring entire probability
+distributions, e.g. as discussed vectors of moments.Bottom: we would like to
+enforce standard architectures like transformer or JEPA to work on (joint) densities
+as internal knowledge, e.g. reducing uncertainty with additional information.
+Working on vectors of moments, we could group features of embedding (e.g. by 4
+here), treating them as moments of some property like age, optionally also including
+mixed like correlation. For transformers finally there is unembedding, which as in
+Fig. 16 can become popular softmax for features being mixed moments. JEPA
+uses separate embedding for predicted situations, which could be trained to be
+real-world parameters, which joint densities can be predicted.
+hence could be also extended to nonlinearities in NNs - might
+be already used by some architectures, with optimized features
+corresponding to (mixed) moments of some properties.
+We should also include densities in input/output, e.g. by predic-
+tion of probability distribution by a few conditional moments as
+in Fig. 10. To include embeddings, we could try to train them to
+be (mixed) moments, e.g. based on some ground truth for these
+properties, e.g. like grokking [30] or from sentiment data.
+To try to enforce embeddings as mixed moments, even not
+knowing of what properties, we could use the final unembedding
+as in Fig. 16 - first working on separate parameters, finally also
+adding mixed moments, by orthonormality getting trivial:
+Z
+[0,1]d
+
+X
+j∈B
+ajfj(x)
+
+
+
+X
+j∈B
+bjfj(x)
+
+ dx= 1 +
+X
+j∈B+
+ajbj (25)
+As linear combination density models can get below 0, we
+need calibration to make it positive. Usingφ(x) = exp(x−1)
+exponential calibration, which as in Fig. 14 seems natural in higher
+dimension, we get the original softmax, just reinterpreting features
+as mixed moments of parameters.
+Transformersuse embeddings in dozens of thousands of fea-
+tures, which might turn out close to of such mixed moments of
+real-world parameters, what should allow to reach better interpre-
+tation, and maybe improved architectures. It would be valuable
+to try to reconstruct the original properties from embeddings, e.g.
+by help of their ground truth - comparing features withf j(x)
+forxknown properties, using polynomial basis or DCT/DST
+for periodic properties. Finally we should search for automatic
+Figure 16.Top: even not having ground truth for properties, we might be able to
+enforce network to work on their probability densities e.g. through replacement of
+softmax, un-embedding. There is now mainly used softmax for values (top row).
+HCR approach allows to replace one or both with density model for each property.
+There are also dependencies e.g. correlations between properties, suggesting to
+also include mixed moments between them, getting softmax-like formula, just for
+mixed moments instead of propertiesx- suggesting their interpretation asf j(x).
+Bottom: density as linear combination might get below zero, what can be prevented
+by calibration: going through someφ:R→R + function, and performing
+normalization - which might be omitted as approximation. The big question is
+how to choose thisφcalibration function, generally should beρ(x)∼xfor large
+x like in softplus:φ(x) =αln(1 +βexp(γx))for someα, β, γ >0. Using
+φ(x) = exp(1 +x)we would get standard softmax for mixed moments, however,
+with exponential behavior for large values, suggesting to test various calibration
+functions to try to enforce working with moments of properties.
+extraction of properties, e.g. based on some expected distribution
+of moments, like higher order ones usually being smaller.
+Alternative approach isJEPA(joint embedding predictive archi-
+tecture) [29] predicting embedding of the next situation, minimiz-
+ing some distanceDfrom this prediction. Here we could modify
+it to predict joint density of properties of this next situation by
+(mixed) momentsa= (a j)j∈B+ describing marginal distributions
+(#{i:j i >0}= 1), maybe also pair-wise dependencies
+(= 2) or higher. It should be trained together with encoder of
+this next situation into vector of propertiesx∈[0,1] d. Then
+density-based distancebetween them would be e.g.: minimized
+D(a,x) = 1/ρ(a,x)or maximizedlnρ(a,x)for log-likelihood:
+ρ(a,x) =φ
+
+X
+j∈B
+ajfj(x)
+
+ wheref j(x) =
+Y
+k
+fjk(xk)
+(26)
+with some calibrationφe.g. exponent. Such asymmetricDwould
+allow to additionallyinclude nonlinearitiesin predictions byf j
+polynomials, and hopefully betterinterpretation- operating on
+real properties (e.g. positions in video) and their probabilities.
+It seems also worth to take (26) fordensity unembedding
+e.g. Pr(x) =ρ(a,x)/ P
+x′ ρ(a,x ′)in transformers - to include
+nonlinearities in prediction, with density interpretation.
+VI. CONCLUSIONS AND FURTHER WORK
+Neurons with joint distribution models seem powerful agnostic
+improvement for currently popular guessed parametrizations like
+MLP or KAN, and are practically accessible with HCR, up
+to omnidirectional neurons like in Fig. 17 - allowing to freely
+choose inference directions, propagate both values and probability
+distributions, with clear coefficient interpretations.
+As in Fig. 3, 1, BNNs are qualitatively superior than current
+ANNs, also have multidirectional propagation, including prob-
+abilities, and need different training than standard backpropa-
+gation. Proposed new ANNs allow to catch up with such low
+
+
+===== PAGE 11 =====
+11
+Figure 17. Omnidirectional HCR neuron proposed in [10] - getting any subsetS
+of connections as input, it can update model of joint distribution insideS: fora j
+coefficients positive only in this subset({i:j i ≥1} ⊂S), and predict/propagate
+to output as the remaining connections e.g expected values for these inputs, for
+example accumulated up to some threshold, including sign for excitatory/inhibitory.
+level behavior, still looking biologically plausible e.g. KAN-like,
+hopefully allowing to also get closer for high level behavior, maybe
+recreating mathematics hidden in BNN behavior.
+However, mastering such new neural network architecture will
+require a lot of work, for example by enhancement of current
+architectures. Here are some basic further research directions:
+•Search for practicalapplications, from replacement of stan-
+dard ANN, for multidirectional inference e.g. in Bayes-
+like scenarios, as neural networks propagating probability
+distributions, enhancements of current architectures, up to
+exploration of similarity/replacement for biological neurons.
+•Practicalimplementation,optimizationespecially of train-
+ing and update, basis optimization and selection techniques,
+exploration of tensor decomposition approach.
+•Working on probability distributions makes it natural for
+information theoretic approaches like information bottle-
+neck [5] optimization of intermediate layers, also hopefully
+leading tobetter understandingof information propagation
+during learning/inference, information held by intermediate
+layers, embedding features as mixed moments, etc.
+•Addingtime dependencelike model update, also for sim-
+ilarity with biological neurons, e.g. long term potentiation,
+connection to various periodic processes/clocks.
+•While the discussed neurons containing joint distribution
+models seem very powerful and flexible, directly working
+in high dimensions they have various issues - suggesting to
+directly predict conditional distributionsinstead with HCR
+parametrization ([11], [12], [14], [15]), what might be also
+worth included in neural network, e.g. as a part of the training
+process - to be decomposed into single neurons.
+•Modification of softmax e.g.embeddingin transformer ap-
+proach from single parameter to multiple HCR moments
+representing probability distribution of embedded parameter.
+•Extraction ofreal-world propertiesfrom embeddings inter-
+preted as containing mixed moments, preferably automatic.
+REFERENCES
+[1] M. Khajehnejad, F. Habibollahi, A. Loeffler, A. Paul, A. Razi, and B. J.
+Kagan, “Dynamic network plasticity and sample efficiency in biological
+neural cultures: A comparative study with deep reinforcement learning,”
+Cyborg and Bionic Systems, vol. 6, p. 0336, 2025.
+[2] R. Follmann, E. Rosa Jr, and W. Stein, “Dynamics of signal propagation and
+collision in axons,”Physical Review E, vol. 92, no. 3, p. 032707, 2015.
+[3] H. Imada and Y . Nageishi, “The concept of uncertainty in animal experiments
+using aversive stimulation.”Psychological bulletin, vol. 91, no. 3, p. 573,
+1982.
+[4] K. Yamazaki, V .-K. V o-Ho, D. Bulsara, and N. Le, “Spiking neural networks
+and their applications: A review,”Brain sciences, vol. 12, no. 7, p. 863, 2022.
+[5] N. Tishby, F. C. Pereira, and W. Bialek, “The information bottleneck method,”
+arXiv preprint physics/0004057, 2000.
+[6] Z. Liu, Y . Wang, S. Vaidya, F. Ruehle, J. Halverson, M. Solja ˇci´c, T. Y .
+Hou, and M. Tegmark, “KAN: Kolmogorov-arnold networks,”arXiv preprint
+arXiv:2404.19756, 2024.
+[7] K. Hornik, M. Stinchcombe, and H. White, “Multilayer feedforward networks
+are universal approximators,”Neural networks, vol. 2, no. 5, pp. 359–366,
+1989.
+[8] G. Chechik, A. Globerson, N. Tishby, and Y . Weiss, “Information bottleneck
+for gaussian variables,”Advances in Neural Information Processing Systems,
+vol. 16, 2003.
+[9] N. Tishby and N. Zaslavsky, “Deep learning and the information bottleneck
+principle,” in2015 ieee information theory workshop (itw). IEEE, 2015, pp.
+1–5.
+[10] J. Duda, “Hierarchical correlation reconstruction with missing data, for ex-
+ample for biology-inspired neuron,”arXiv preprint arXiv:1804.06218, 2018.
+[11] J. Duda and A. Szulc, “Social benefits versus monetary and multidimen-
+sional poverty in poland: Imputed income exercise,” inInternational Con-
+ference on Applied Economics. Springer, 2019, pp. 87–102, preprint:
+https://arxiv.org/abs/1812.08040.
+[12] J. Duda, H. Gurgul, and R. Syrek, “Modelling bid-ask spread
+conditional distributions using hierarchical correlation reconstruction,”
+Statistics in Transition New Series, vol. 21, no. 5, 2020, preprint:
+https://arxiv.org/abs/1911.02361.
+[13] J. Duda and G. Bhatta, “Gamma-ray blazar variability: new statistical meth-
+ods of time-flux distributions,”Monthly Notices of the Royal Astronomical
+Society, vol. 508, no. 1, pp. 1446–1458, 2021.
+[14] J. Duda and S. Podlewska, “Prediction of probability distributions of
+molecular properties: towards more efficient virtual screening and better
+understanding of compound representations,”Molecular Diversity, pp. 1–12,
+2022.
+[15] J. Duda and G. Bhatta, “Predicting conditional probability distributions of
+redshifts of active galactic nuclei using hierarchical correlation reconstruc-
+tion,”Monthly Notices of the Royal Astronomical Society, p. stae963, 2024.
+[16] R. Pogodin and P. Latham, “Kernelized information bottleneck leads to
+biologically plausible 3-factor hebbian learning in deep networks,”Advances
+in Neural Information Processing Systems, vol. 33, pp. 7296–7307, 2020.
+[17] W.-D. K. Ma, J. Lewis, and W. B. Kleijn, “The HSIC bottleneck: Deep
+learning without back-propagation,” inProceedings of the AAAI conference
+on artificial intelligence, vol. 34, no. 04, 2020, pp. 5085–5092.
+[18] F. Durante and C. Sempi, “Copula theory: an introduction,” inCopula theory
+and its applications. Springer, 2010, pp. 3–31.
+[19] S. Ioffe and C. Szegedy, “Batch normalization: Accelerating deep network
+training by reducing internal covariate shift,” inInternational conference on
+machine learning. pmlr, 2015, pp. 448–456.
+[20] J. Duda, “Rapid parametric density estimation,”arXiv preprint
+arXiv:1702.02144, 2017.
+[21] J. Strawa and J. Duda, “Improving kan with cdf normalization to quantiles,”
+arXiv preprint arXiv:2507.13393, 2025.
+[22] J. Duda and A. Szulc, “Social benefits versus monetary and multidimensional
+poverty in Poland: imputed income exercise,” inInternational Conference on
+Applied Economics. Springer, 2019, pp. 87–102, preprint: arXiv:1812.08040.
+[23] T. G. Kolda and B. W. Bader, “Tensor decompositions and applications,”
+SIAM review, vol. 51, no. 3, pp. 455–500, 2009.
+[24] J. Duda, “Fast optimization of common basis for matrix set through common
+singular value decomposition,”arXiv preprint arXiv:2204.08242, 2022.
+[25] J. Duda, J. Bracha, and A. Przybysz, “Linear cost mutual information
+estimation and independence test of similar performance as hsic,”arXiv
+preprint arXiv:2508.18338, 2025.
+[26] A. Gretton, K. Fukumizu, C. Teo, L. Song, B. Sch ¨olkopf, and A. Smola,
+“A kernel statistical test of independence,”Advances in neural information
+processing systems, vol. 20, 2007.
+[27] J. Duda, “Exploiting statistical dependencies of time series with hierarchical
+correlation reconstruction,”arXiv preprint arXiv:1807.04119, 2018.
+[28] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez,
+Ł. Kaiser, and I. Polosukhin, “Attention is all you need,”Advances in neural
+information processing systems, vol. 30, 2017.
+[29] M. Assran, Q. Duval, I. Misra, P. Bojanowski, P. Vincent, M. Rabbat,
+Y . LeCun, and N. Ballas, “Self-supervised learning from images with a
+joint-embedding predictive architecture,” inProceedings of the IEEE/CVF
+conference on computer vision and pattern recognition, 2023, pp. 15 619–
+15 629.
+[30] A. Power, Y . Burda, H. Edwards, I. Babuschkin, and V . Misra, “Grokking:
+Generalization beyond overfitting on small algorithmic datasets,”arXiv
+preprint arXiv:2201.02177, 2022.

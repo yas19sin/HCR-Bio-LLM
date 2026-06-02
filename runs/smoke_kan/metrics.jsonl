@@ -1,0 +1,4 @@
+{"device": "cpu", "event": "start", "model_type": "hcr_kan_mean", "params": 13088, "task": "causal"}
+{"event": "train", "loss": 3.825718402862549, "state_mu_mean": -0.01627439260482788, "state_mu_std": 1.00011146068573, "step": 1, "tokens_per_sec": 3015.170085182549}
+{"event": "eval", "step": 1, "val_accuracy": 0.03125, "val_brier": 0.9455692172050476, "val_ece": 0.06876961886882782, "val_loss": 3.696895122528076, "val_mu_mean": -0.022371981292963028, "val_mu_std": 0.9998162388801575, "val_perplexity": 40.321915195687666}
+{"best_val_loss": 3.696895122528076, "event": "final", "output_dir": "runs\\smoke_kan", "params": 13088}

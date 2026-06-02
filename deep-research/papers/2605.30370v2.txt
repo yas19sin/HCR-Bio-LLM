@@ -1,0 +1,1938 @@
+
+
+===== PAGE 1 =====
+Updating the standard neuron model in artificial neural networks
+Raul Mohedano1*, Thomas Batard 2, Erik Velasco-Salido 1,3,
+Ramsses De Los Santos Mendoza 2, Jorge H. Mart´ ınez2, Stacey Levine 4,
+Marcelo Bertalm´ ıo1*
+1Spanish National Research Council (CSIC), Madrid, Spain.
+2Center for Research in Mathematics (CIMAT), Guanajuato, Mexico.
+3Universidad Aut´ onoma de Madrid (UAM), Madrid, Spain.
+4National Science Foundation (NSF), Alexandria, VA, USA.
+*Corresponding author(s). E-mail(s): raul.mohedano@csic.es; marcelo.bertalmio@csic.es;
+Abstract
+From their inception in the 1950s, artificial neural networks (ANNs) started using the so-called point neuron
+model then prevalent in neuroscience, hoping that this analogy would allow for a better emulation of brain
+function. Over the years the neuroscience literature has shown that the point neuron model is too simplistic
+to properly represent many fundamental neural processes; however, the standard neuron model in ANNs still
+remains the same. Here we substitute it by a very recent model of cortical cells and demonstrate through
+theoretical analyses and experimental results how, simply by using a more realistic neural unit element without
+augmenting the number of parameters, the resulting ANNs offer a number of important advantages that include
+increases in expressivity, robustness and learning speed, and a reduction in memorization and the amount of
+training data needed.
+Introduction
+In the neuroscience of the mid 20th century, the prevalent view on neural computation was a simplistic abstraction
+[1, 2] currently known as the point neuron model, where it is assumed that each individual neuron linearly sums
+its inputs, i.e. that its dendrites are passive and act as mere “readers” of incoming signals, and after this linear
+filtering there follows a nonlinear process to generate the neuronal output. This approach was adopted to represent
+neurons in artificial neural networks (ANNs) when they were created in the late 1950s [3], with the belief that
+matching the brain starts with emulating its building block, the neuron [4]. To this day, neural units in ANNs still
+follow the same paradigm [5], and the cascade of linear-nonlinear stages in ANNs is referred to as the standard
+deep learning (DL) framework [6].
+However, the ANN architectures that are currently most popular are poorly aligned with brain functionality
+[7–10] and have some critical limitations that do not affect living beings, such as requiring huge amounts of training
+data and being extremely sensitive to virtually unnoticeable perturbations of their input [11]. Our conjecture is
+the following: at the root of these and other fundamental constraints and drawbacks of ANNs lies the fact that
+the point neuron model is overly simplistic. It assumes that dendrites only act linearly, but since the late 1990s
+and early 2000s it has become clear that dendritic processing is not only much more complex, but also that
+complex dendritic computations are an indispensable element of key neural behaviors and brain functions [12–
+14]. Of note, an essential property of dendrites is that they can receive backpropagating action potentials (bAPs)
+initiated from the soma [15], and the importance of bAPs for the computations of dendrites, single cells and the
+whole network cannot be overstated [16–18]. There is currently a renewed interest in the research community in
+leveraging neuroscience to accelerate progress in AI [19], and a number of recent works consider more realistic
+dendritic models to improve the performance of ANNs [5, 20]. However, these approaches still fall under the
+standard DL framework, which is not adequate to represent the back and forth exchange between cell output and
+dendritic contributions caused by bAPs [21].
+Very recently, a new model for neurons in the primary visual cortex that considers the interaction between
+dendritic nonlinearities and bAPs was shown to be able to explain a number of physiological results that challenge
+1
+arXiv:2605.30370v2  [cs.NE]  1 Jun 2026
+
+
+===== PAGE 2 =====
+uiɸ
+x1
+x2
+xj
+xN
+Σ yi
+(a)
+ɸ
+x1
+x2
+xj
+xN
+Σ yi
+σ σ σ σ
+z1 z2 zk
+zi
+zD
+zi+
+Σ
+(-λ)x
+vi (b)
+Fig. 1: Schematic neuron models. Left: standard neuron model in ANNs, following a simplistic abstraction from
+the neuroscience of the 1950s [1, 2] that assumed linear dendrites and an output nonlinearity. Right: proposed
+neuron model, based on a recent model of cortical cells [22]; notice how this new model extends the standard
+neuron model by considering internal nonlinearitiesσ(that represent dendritic processes), and these nonlinearities
+are affected in a dynamic way by the activity valuez i (that represents the bAP going from the soma to the
+dendrites), itself depending on the inputsx j and the contributionsz k from other neurons.
+standard approaches [22]. Here, we adapt this more realistic activity model of biological neurons into a novel
+formulation for the neural units in ANNs. Compared with an ANN that uses the standard neuron model and
+has the same number of parameters, an ANN built using this updated neuron model is much less impacted by
+the critical limitations mentioned above, being considerably more robust to input perturbations and requiring
+a significantly smaller amount of training data, as demonstrated by our theoretical analyses and experimental
+results. Furthermore, the novel neuron model allows the network to have other very relevant advantages as well: to
+be more expressive, requiring less parameters to achieve a given quality level in the task it solves; to learn faster,
+reaching a target performance with fewer learning steps; and to memorize less, which is an asset when the training
+data has noisy or mislabeled samples, as is generally the case.
+Results
+Updating the neuron model
+We say that an ANN follows the standard model (SM) when the outputu i of a neural unit given an inputx∈R N
+may be written as:
+ui =ϕ(y i),(1)
+yi =
+NX
+j=1
+mijxj −b i,(2)
+wherem i ∈R N is a linear filter,b i ∈Ris the bias term, andϕis the (nonlinear) activation function.
+Here we propose a new neuron model for ANNs that extends the standard model with the addition of a new bias
+term, inspired by a very recent neuroscience work [22], that emulates the contribution of dendritic nonlinearities
+mediated by their interaction with bAPs. In our formulation, the outputv i of a neural unit given an inputx∈R N
+is
+vi =ϕ(z i),(3)
+zi =
+yi
+z }| {
+NX
+j=1
+mijxj −b i −
+new biasz }| {
+λ
+DX
+k=1
+wik σ(zk −zi),(4)
+2
+
+
+===== PAGE 3 =====
+whereλ∈R,w i = (wik)D
+k=1 ∈R D is a linear filter, andσis a nonlinear function.
+The first term in Eq. (4) represents the response to the inputxproduced by the linear dendrites; notice how
+this term is identical toy i in Eq. (2), which is to be expected given that the SM only considers dendrites that are
+passive. The second term in Eq. (4) models the effect of nonlinear dendrites. In this new bias term, each of the
+dendrites has the nonlinear response functionσ, which receives two inputs: the contributionz k from a neighboring
+unit in the same neural layer, and the valuez i, which emulates the bAP from the soma. From Eqs. (2) and (4) it
+is trivial to see that, whenλ= 0, our proposed neuron model is identical to the standard one; see Fig. 1 for an
+schematic of both models. Importantly, if we takeλandw i to be fixed and predefined, then our proposed model
+has exactly the same number of trainable parameters as in the SM case, i.e.m i andb i.
+Given that the new bias term involvesz i, the definition ofz i depends onz i itself and therefore Eq. (4) is
+implicit. For this reason, we say that an ANN that uses our model is animplicit bias neural network(IBNN) . We
+can see from Eqs. (3) and (4) that computing the output of an IBNN requires solving a system of coupled implicit
+equations, and while this type of problem does not necessarily have a solution, in our case whenσis a sigmoidal
+function andλ < Tfor some positive thresholdT, the solution always exists, is unique, and minimizes an energy,
+and consequently it can be computed with a simple gradient descent algorithm (see Methods).
+As an illustration, we consider a toy example in 2D where we want to find the boundary between two classes.
+We train different ANNs with analogous architecture to solve this task (see Methods): a SM network, and several
+IBNNs with a variety of values for the weightλof the implicit bias term and the maximum slope of the nonlinearity
+σ, denoted byp. Fig. 2 shows the two classes in yellow and blue, and the classification boundaries obtained with
+the different ANNs. As we can see, IBNN is more expressive than the SM network, being able to approximate
+well the non-convex shape of the classification boundary while the latter is only capable of producing a convex
+polygon. Also, the resulting boundary in IBNN is able to become more curved as the magnitude of the parameterλ
+increases (Fig. 2, left), andpcontrols the curvature of the segments or arcs composing the classification boundary
+(Fig. 2, right).
+SM
+IBNN λ=-0.01, p=10
+IBNN λ=-0.02, p=10
+IBNN λ=-0.05, p=10
+Acc.: 96.92 %
+Acc.: 97.26 %
+Acc.: 97.65 %
+Acc.: 99.16 %
+(a)
+SM
+IBNN λ=-0.05, p= 1
+IBNN λ=-0.05, p=10
+IBNN λ=-0.05, p=20
+Acc.: 96.92 %
+Acc.: 97.10 %
+Acc.: 99.16 %
+Acc.: 98.57 % (b)
+Fig. 2: Plot of the decision boundary for ANNs with a single hidden layer of three neurons in a binary classification
+of 2D input data: comparison between ANNs whose hidden layer is composed of neurons according to the SM(blue
+solid line in both left and right panels) and of neurons according to the bio-inspired neuron model with different
+weightsλfor the implicit bias term (left panel, in shades of green) and different values of the maximum slope
+pof the sigmoidal nonlinearityσ(right panel, shades of red). The resulting validation accuracy of each ANN is
+included in the legend. Both panels suggest that the IBNN is more expressive than the SM network, as the IBNN is
+able to approximate well the non-convex shape of the classification boundary while the ANN using the SM neuron
+is only capable of producing a convex polygonal shape. The IBNN boundary can better fit curved boundaries as
+the magnitude of the parameterλincreases (left) while he maximum slopepof the nonlinearityσcontrols the
+sharpness of the transitions between the segments or arcs composing the classification boundary (right).
+3
+
+
+===== PAGE 4 =====
+Advantages of the networks that use the updated neuron model
+We perform theoretical analyses and numerical experiments comparing in each case an ANN that uses SM neurons
+with an IBNN that has the same architecture and number of parameters but whose neurons follow the proposed
+model, thus ensuring that the benefits of IBNN do not come from an increase in model complexity. Numerical
+tests consist of solving image classification tasks over different image datasets and with different architectures, in
+order to highlight the generality of the approach.
+Less training data required
+Fig. 3 shows, for three different image datasets, that IBNN consistently requires just a fraction (20−82%) of the
+training data in order to achieve the best performance level of an ANN with neurons that follow the SM.
+20 40 60 80 100
+Acc (%)
+Training dataset proportion (%)
+85
+86
+87
+88
+89
+SM
+IBNN
+(a) Fashion-MNIST
+20 40 60 80 100
+Training dataset proportion (%)
+Acc (%)
+77
+78
+79
+80
+81
+82
+ SM
+IBNN (b) SVHN
+100
+Training dataset proportion (%)
+Acc (%)
+58
+60
+62
+64
+66
+68
+20 40 60 80
+SM
+IBNN (c) CIFAR-10
+Fig. 3: IBNN consistently requires just a fraction (29−82%) of the training data in order to achieve the best
+performance level of an ANN with neurons that follow the SM. The pink dashed line indicates the best validation
+accuracy for SM and the proportion of the complete dataset needed to achieve it, and the proportion for the IBNN
+to achieve the same accuracy. Datasets are indicated under each graph and corresponding architectures indicated
+in Methods. Shadowed, CI of 90%.
+Increased robustness to input perturbations
+A common way to analyze the sensitivity of an ANN to input perturbations is to compute the norm of the Jacobian
+matrix of the network with respect to the input, with smaller norm values corresponding to more robust networks
+[23]. Under a mild set of assumptions, it can be shown that the norm of the Jacobian of an IBNN is smaller than
+that of its corresponding SM network (i.e. the network obtained by settingλ= 0), and therefore the IBNN is more
+robust (see Methods). It is notable that the formal mathematical proof presented in [6] to demonstrate that SM
+networks are either inaccurate or unstable (if accurate) does not directly apply to the IBNN formulation, whose
+structure does not satisfy the assumptions in [6] due to its implicit and highly nonlinear formulation (see Methods).
+Recently, it has become very relevant to evaluate the robustness of networks against stealth attacks [24], defined
+as a scenario where an attacker modifies one or more neurons in an ANN in such a way that the following two
+conditions are met: (1) for inputs belonging to the validation set of the ANN, the responses are as expected, and
+therefore no attack is observed; (2) however, for some trigger input known only to the attacker, the ANN provides
+the result that the attacker wants. There is proof that a one-neuron stealth attack is possible on a SM network
+[24] but we demonstrate that it would be unfeasible on an IBNN (see Methods).
+As experimental demonstration of the robustness capabilities that the proposed neuron model provides, Figs. 4
+and 5 show comparisons of the performance of IBNN and SM networks with the same number of parameters against
+adversarial attacks of different nature. As we can see, IBNN is consistently less sensitive to input perturbations.
+Greater expressivity
+Assessing the expressivity of a neural network entails determining the functions it can compute. In analogy to
+the classical works that demonstrate the universal approximation power of ANNs based on the SM [27, 28], we
+4
+
+
+===== PAGE 5 =====
+0.00 0.05 0.10 0.15 0.20
+ε (attack power)
+Acc (%)
+0
+20
+40
+60
+80
+ SM
+IBNN
+(a) Fashion-MNIST
+0.000 0.005 0.010 0.015 0.020
+ε (attack power)
+Acc (%)
+0
+20
+40
+60
+80
+SM
+IBNN (b) SVHN
+0.000 0.005 0.010 0.015 0.020
+ε (attack power)
+Acc (%)
+0
+10
+20
+30
+40
+50
+60
+70
+SM
+IBNN (c) CIFAR-10
+Fig. 4: IBNN is more robust to white-box adversarial attacks. The curves represent the accuracy achieved by each
+model for different intensities of an adversarial attack, in particular Projected Gradient Descent (PGD) [25] attack
+(power denoted in the horizontal axis: note that a power of 0 corresponds to the clean accuracy of the model).
+Datasets are indicated under each graph and corresponding architectures and details on the adversarial attacks
+are indicated in Methods. Shadowed, full range of data (CI of 100%).
+Acc (%)
+0
+20
+40
+60
+80
+SM IBNN
+(a) Fashion-MNIST
+Acc (%)
+0
+10
+20
+30
+40
+50
+60
+70
+80
+SM IBNN
+ (b) SVHN
+Acc (%)
+0
+10
+20
+30
+40
+50
+60
+70
+SM IBNN
+ (c) CIFAR-10
+Fig. 5: IBNN is more robust to black-box adversarial attacks. The translucent bar represents clean accuracy for
+each model, whereas the solid bar represents the accuracy under an adversarial attack, in particular Pixle [26]
+of fixed strength. Datasets are indicated under each graph and corresponding architectures and details on the
+adversarial attacks are indicated in Methods. The black lines indicate the full range of obtained accuracies (CI of
+100%).
+establish that a single-layer IBNN is also able to approximate any given mapping with an arbitrarily small error
+(see Methods). But we also show that IBNNs are in fact more expressive than SM networks, because they need a
+smaller number of parameters to approximate the same function (see Methods).
+As an example of the improvement in expressivity that the updated neuron model can provide to an ANN,
+Fig. 6 shows that the performance of an IBNN is consistently better than that of a SM network with the same
+number of trainable parameters or, equivalently, that IBNN can achieve the same performance as a SM network
+with less parameters. Note that the potential consideration of trainableλwould introduce an additional number of
+trainable parameters equal to the number of IBNN layers in the network, which would make a negligible difference
+to the comparison shown in the figure.
+5
+
+
+===== PAGE 6 =====
+15724 314387867 23581 39295
+Num. params (log scale)
+Acc (%)
+ch=2 ch=3ch=1 ch=4 ch=5
+84
+85
+86
+87
+88
+89
+90
+SM
+IBNN
+(a) Fashion-MNIST
+20744 41678 10568031186 8414662812
+Num. params (log scale)
+Acc (%)
+ch=4 ch=2 ch=3 ch=6 ch=10 ch=8
+74
+76
+78
+80
+82
+84
+86
+88
+ SM
+IBNN (b) SVHN
+177898 3813868575431414
+Num. params (log scale)
+Acc (%)
+ch=8 ch=3 ch=16 ch=32
+55
+60
+65
+70
+75
+SM
+IBNN (c) CIFAR-10
+Fig. 6: IBNN is more expressive: it achieves higher accuracy with the same number of trainable parameters or,
+equivalently, it requires less parameters to perform as well as a SM network. Variation in the number for parameters
+caused by the increase in the number of channels of the layers of the backbone is accounted for in each graph.
+Datasets are indicated under each graph and corresponding architectures are indicated in Methods. Shadowed, CI
+of 90%.
+Faster learning
+Fig. 7 shows that IBNN requires less learning steps to achieve the same classification performance as a SM network:
+in all cases, this equated to less than half the number of epochs.
+0 20 40 60 80
+Epochs
+Acc (%)
+80
+82
+84
+86
+88
+90
+SM
+IBNN
+(a) Fashion-MNIST
+0 20 40 60 80
+Epochs
+Acc (%)
+55
+60
+65
+70
+75
+80
+85
+SM
+IBNN (b) SVHN
+0 20 40 60 80
+Epochs
+Acc (%)
+50
+55
+60
+65
+70
+75
+SM
+IBNN (c) CIFAR-10
+Fig. 7: IBNN learns faster: IBNN matches in 18-25 epochs the best validation accuracy reached by the SM network
+within a 80-epoch training, which, in all cases, happened after the 53-th epoch. The pink dashed line indicates
+the best validation accuracy for the SM over the considered training epochs and epoch when it was achieved, and
+the epoch for the IBNN to achieve the same accuracy. Datasets are indicated under each graph and corresponding
+architectures are indicated in Methods. Shadowed, CI of 90%.
+Less memorization
+When networks have a very large number of parameters they can manage to learn imperfect and even mislabeled
+training data, in a process called memorization [29]. This is clearly problematic, as the performance of the network
+6
+
+
+===== PAGE 7 =====
+may become brittle. The occurrence of memorization correlates with the curvature of the loss function with respect
+to the input [30], and we provide a mathematical analysis suggesting that IBNN has a smaller curvature and
+therefore memorizes less than a SM network (see Methods).
+Fig. 8 shows an experiment where the training data has been corrupted with varying percentages of mislabeled
+samples (details in Methods): the advantage of the best validation accuracy achieved by IBNN over the best
+validation achieved by an analogous SM network is consistently larger when the training set includes data with
+wrong labels, indicating that IBNN memorizes less.
+0.5
+1.0
+1.5
+86.0
+86.5
+87.0
+87.5
+88.0
+88.5
+89.0
+Acc. (%)Diﬀ acc. (%pt)
+Proportion of mislabeled data (%)
+0 5 10 15
+SM
+IBNN
+Diﬀ IBNN-SM
+(a) Fashion-MNIST
+1
+2
+3
+75
+76
+77
+78
+79
+80
+81
+Proportion of mislabeled data (%)
+0 5 10 15
+Acc. (%)Diﬀ acc. (%pt)
+SM
+IBNN
+Diﬀ IBNN-SM (b) SVHN
+1.0
+1.5
+2.0
+2.5
+62
+63
+64
+65
+66
+67
+Acc. (%)Diﬀ acc. (%pt)
+Proportion of mislabeled data (%)
+0 5 10 15
+SM
+IBNN
+Diﬀ IBNN-SM (c) CIFAR-10
+Fig. 8: IBNN memorizes less: the improvement in validation accuracy of IBNN over the SM network is constently
+larger when the training set includes data with wrong labels and, in certain instances, the difference even widens as
+the proportion of wrong labels increases (see panel (b)). Datasets are indicated under each graph and corresponding
+architectures are indicated in Methods. For each dataset: top row, best validation accuracy achieved for each
+model for different percentage of wrong training labels; bottom row, difference of the validation of IBNN and SM
+depicted in the top row. Shadowed, CI of 90%.
+Discussion
+While ANNs continue to serve as the core of many state-of-the-art AI algorithms, they still have significant
+limitations that have not been overcome despite extensive research efforts. There appears to be an emerging
+consensus that the solution to these problems will not arrive simply from scaling up current ANNs, but that
+fundamentally new approaches are needed instead [19]. In this article we take inspiration from neuroscience and
+propose to use a new, compact and very effective model of cortical cells [22] to replace the omnipresent but clearly
+outdated point neuron model of ANNs. The novelty of the proposed approach lies in the combination of several
+bio-inspired elements, including internal dendritic-like nonlinearities that become dynamic and input-dependent
+through the modeling of the bAP, and lateral interactions among neurons that result in a system of coupled
+and implicit differential equations. In the NeuroAI literature there are recent works that introduce more involved
+models of neural units [5, 31–33], but they fail to emulate the bAP, or assume linear dendrites, or disregard
+lateral interactions. And, while some AI approaches use implicit layers and differential equations [34], they lack
+an equivalent to the bAP that might make the nonlinearities input-dependent.
+The experimental and theoretical results presented in the article support our original hypothesis, namely, that
+the overly simplistic neuron model of ANNs contributes to their fundamental limitations, and that an updated and
+biologically inspired neuron model, one that takes into account the complexity of dendritic processing, may allow
+ANNs to achieve significant advantages. We have shown that ANNs using the new model demonstrate gains over
+a number of aspects that include expressivity, robustness and learning, and this aligns with the fact that nonlinear
+dendrites bring these same advantages to cortical computations and neural behaviors [14].
+The experiments have focused on image data, and the model comes from visual neuroscience, but we expect the
+approach to generalize well, making extensions to other data modalities simple, in the same way that deep learning
+is applied to any sort of data despite its being based on the hierarchical model that Hubel and Wiesel proposed
+7
+
+
+===== PAGE 8 =====
+for neurons in the visual cortex [2]. The IBNN parameters{m i, bi}in all experiments have been learned, but we
+have also tested a second mode of operation for our formulation where these parameters are simply taken from a
+SM network that solves the same task and has already been trained; the original mode produces more accurate
+results and is better suited for scenarios where training data is scarce (given that IBNN needs less training data),
+whereas the second mode can be seen as a fast and simple method to take an existing AI system and make it more
+robust to input perturbations, without the need to train it again (Supplementary Information).
+There are several research questions related to the proposed model that are worth exploring as future work.
+To begin, we must note that in our experiments the optimum value for the hyperparameterλwas either found
+by grid search or through pre-training (i.e. by optimizing for accuracy); moving forward we believe thatλshould
+always be considered a trainable parameter. In the same vein, the spatial extent of the filtersw i and the maximum
+slopepof the nonlinearityσshould also be learned. This would produce just a marginal increase in the number of
+parameters while it could enhance the expressivity of the network even further, although the mathematical analysis
+could become much more involved. Related to this, the use of values ofλabove a certain positive threshold might
+imply the existence of multiple solutions for a single input, which could allow to represent with higher fidelity the
+modeling of biological processes through partial differential equations, where the final state of the process is often
+path-dependent [35]. We will also develop numerical techniques specifically tailored to IBNNs, in order to reduce
+the computational complexity associated to the iterative nature of finding the solution to the implicit system of
+equations, and also to the presence of multiple cross-comparisons in the nonlinear term of the new neuron model.
+Secondly, while the proposed model was inspired by the V1 model in [22], for the sake of simplicity we did not
+emulate it fully, omitting one term of their formulation. We will incorporate that term to our model, which will
+introduce a non-monotonic internal nonlinearity, and analyze in which contexts this may provide an advantage (a
+recent work suggests that the use of non-monotonic nonlinearities might be key to predict time-varying phenomena
+[36]).
+Thirdly, the second term of our model (i.e. the new bias in Eq. (3)) leads to the observation that IBNN
+has the ability to push for independent representations, because if the activitiesz i andz j are very similar then
+the neural unitsiandjdo not influence each other; this is consistent with the fact that the V1 model that
+motivated our approach has a direct connection with the sparse coding framework [22]. We view this property
+of our proposed neuron model as providing a complementary behavior to the attention mechanism employed by
+Transformer architectures [37], it would be interesting to test if their combination (i.e. a Transformer using the
+updated neuron model) provides substantial gains in expressivity.
+Finally, the mathematical form of our model, where the solution minimizes an energy and can be found through
+an iterative algorithm analogous to the numerical approximation of a differential equation (Methods, Eq. (12)),
+links our approach with energy models for AI [38] and also with causal modeling for machine learning [39], a topic
+of the utmost importance as it has been argued that the major unsolved problems in AI are fundamentally tied
+to causality [40].
+Methods
+Model solution
+Existence, uniqueness, and energy minimization
+We will next give some conditions onλfor which we have (i) existence and (ii) uniqueness of the solutions of
+Eq. (4). To that aim, we establish a connection between Eq. (4) and energy functionals of the form
+Eλ(z;y) =g(z;y)−f λ(z),z,y∈R D with
+
+
+
+g(z;y) = 1
+2 ∥z−y∥ 2
+2
+fλ(z) = λ
+2
+DX
+i=1
+DX
+k=1
+wikS(zk −z i)
+,(5)
+where
+• Sis a primitive function ofσ, and
+• wik are symmetric, positive, and normalized (i.e.w ik =w ki ≥0 and PN
+k=1 wik = 1), 0< i, k≤D.
+Proposition 1The solutions of Eq.(4), if they exist, are the critical points ofE λ(·;Mx−b)provided thatSis even.
+ProofDenoting by∇ z the gradient operator with respect toz, we have that
+∇zg(z;y) =z−y
+8
+
+
+===== PAGE 9 =====
+Moreover, ifSis even, then we have from the fact thatS ′ =σandware symmetric that
+(∇zfλ(z))i =−λ
+DX
+k=1
+wikσ(zk −z i),
+from which we deduce that
+(∇zEλ(z;y)) i = 0⇐ ⇒z i =y i −λ
+DX
+k=1
+wikσ(zk −z i).
+□
+Proposition 2IfSis positive, even and satisfies thatS(z)≤Az 2, for someA≥0thenE λ is coercive with respect to the
+first variable for anyλ < 1
+4A .
+ProofWe have
+1
+2 ∥z−y∥ 2 ≥ 1
+2 ∥z∥2−∥z∥∥y∥+ 1
+2 ∥y∥2 (6)
+from the Cauchy-Schwartz inequality.
+AsSis positive, the termf λ(z) in (5) is positive ifλ >0, from which follows that
+Eλ(z;y)≥ 1
+2 ∥z∥2−∥z∥∥y∥+ 1
+2 ∥y∥2 ifλ <0,
+which gives thatE λ is coercive with respect tozifλ <0.
+On the other hand, ifλ >0 andS(z)≤Az 2, we have
+λ
+2
+DX
+i=1
+DX
+j=1
+wij S(zj −z i)≤ λ
+2 A
+DX
+i=1
+DX
+j=1
+wij(zj −z i)2
+≤ λ
+2 A
+DX
+i=1
+DX
+j=1
+wij(z2
+j +z 2
+i + 2|zj ||zi|)
+≤λA∥z∥ 2+λA
+DX
+i=1
+DX
+j=1
+wij |zj ||zi|(7)
+from Cauchy-Schwartz inequality.
+Note that we have
+DX
+i=1
+DX
+j=1
+wij z2
+i =
+DX
+i=1
+DX
+j=1
+wij z2
+j =∥z∥ 2
+as the kernelwis normalized. The Cauchy-Schwartz inequality applied to the vectorsa,b∈R D×D:
+aij = √wij |zi|b ij = √wij |zj |
+gives⟨a,b⟩ ≤ ∥a∥∥b∥, i.e.
+DX
+i=1
+DX
+j=1
+wij |zi||zj | ≤
+
+
+DX
+i=1
+DX
+j=1
+wij z2
+j
+
+
+1/2
+
+DX
+i=1
+DX
+j=1
+wij z2
+i
+
+
+1/2
+(8)
+≤ ∥z∥ 2 (9)
+We deduce from Eqs. (6), (7) and (8) that
+Eλ(z;y)≥ 1
+2 ∥z∥2−∥z∥∥y∥+ 1
+2 ∥y∥2−λA∥z∥2−λA∥z∥2
+≥ ∥z∥ 2(1
+2 −2λA)− ∥z∥∥y∥+ 1
+2 ∥y∥2.
+We deduce thatE λ is coercive ifλ < 1
+4A. □
+Proposition 3IfSis convex and twice differentiable with second order derivative bounded above byK >0, then the energy
+in Eq.(5)is strictly convex with respect to the first variable forλ < 1
+2K .
+9
+
+
+===== PAGE 10 =====
+ProofWe have
+d
+dt Eλ(z+tη;y) = 1
+2(2⟨z,η⟩+ 2t∥η∥ 2−2⟨η,y⟩)
+− λ
+2
+DX
+i=1
+DX
+j=1
+wij(ηj −η i)S′(zj +tη j −z i −tη i)
+and
+d2
+dt2 Eλ(z+tη;y) =∥η∥ 2− λ
+2
+DX
+i=1
+DX
+j=1
+wij(ηj −η i)2S′′(zj +tη j −z i −tη i),
+which gives
+d2
+dt2 Eλ(z+tη;y) |t=0 =∥η∥ 2− λ
+2
+DX
+i=1
+DX
+j=1
+wij(ηj −η i)2S′′(zj −z i),
+AsSis twice differentiable and convex, we have, by definition, thatS ′′ ≥0. We deduce that d2
+dt2 Eλ(z+tη;y) |t=0 >0 if
+λ <0, which shows thatE λ is strictly convex.
+Let us now assume thatλ >0. We have that
+d2
+dt2 Eλ(z+tη;y) |t=0 ≥ ∥η∥ 2− λ
+2 K
+DX
+i=1
+DX
+j=1
+wij(ηj −η i)2.
+Then, from the triangle inequality
+(ηj −η i)2 ≤η 2
+j +η 2
+i + 2|ηj ||ηi|,
+we have
+d2
+dt2 Eλ(z+tη;y) |t=0 ≥ ∥η∥ 2− λ
+2 K
+DX
+i=1
+DX
+j=1
+wij(η2
+j +η 2
+i )− λ
+2 K
+DX
+i=1
+DX
+j=1
+wij |ηj ||ηi|(10)
+The Cauchy-Schwartz inequality applied to the vectorsa,b∈R D×D:
+aij = √wij |ηi|b ij = √wij |ηj |
+gives⟨a,b⟩ ≤ ∥a∥∥b∥, i.e.
+DX
+i=1
+DX
+j=1
+wij |ηi||ηj | ≤
+
+
+DX
+i=1
+DX
+j=1
+wij η2
+j
+
+
+1/2
+
+DX
+i=1
+DX
+j=1
+wij η2
+i
+
+
+1/2
+≤ ∥η∥ 2 (11)
+We deduce from (10) and (11) that
+d2
+dt2 Eλ(z+tη;y) |t=0 ≥ ∥η∥ 2−λK∥η∥ 2−λK∥η∥ 2
+≥ ∥η∥ 2(1−2λK)
+≥ ∥η∥ 2>0 ifλ < 1
+2K .
+□
+Corollary 3.1Under the assumption thatSis positive, even and satisfies thatS(z)≤Az 2, for someA≥0, then Eq.(4)
+possesses a solution forλ < 1
+4A . Moreover, ifSis also twice differentiable and convex with second order derivative bounded
+above byK >0, then the solution is unique forλ < 1
+max(4A,2K) .
+ProofAccording to Prop. 2, the energyE λ(·;Mx−b) is coercive forλ < 1
+4A ifSis positive, even and satisfies that
+S(z)≤Az 2. Together with the continuity ofE λ(·;Mx−b), it guarantees the existence of a minimum ofE λ(·;Mx−b).
+Then, by differentiability ofE λ(·;Mx−b), its minima correspond to the points vanishing its gradient, and these latter
+correspond to solutions of Eq. (4) according to Prop. 1. Moreover, ifSis also twice differentiable and convex with second
+order derivative bounded above byK >0, then the energy is also strictly convex ifλ < 1
+2K according to Prop. 3. We
+deduce thatE λ(·;Mx−b) is coercive and strictly convex forλ <min
+ 1
+4A , 1
+2K
+
+= 1
+max(4A,2K) , which guarantees the
+uniqueness of the minimum of the energy, which shows the uniqueness of the solution of Eq. (4).□
+10
+
+
+===== PAGE 11 =====
+Practical computation of the solution
+Corollary 3.2Under the assumptions of Prop. 2 and for a well-chosen sequence{τ (n)}, the sequencez (n) = (z (n)
+i )D
+i=1
+defined by
+z(n+1)
+i =z (n)
+i +τ (n)
+
+−z (n)
+i +
+NX
+j=1
+mij xj −bi −λ
+DX
+k=1
+wikσ(z (n)
+k −z (n)
+i )
+
+, i∈ {1, . . . , D},(12)
+converges; and, forϕcontinuous, the sequenceΦ(z (n)) = (ϕ(z (n)
+i ))D
+i=1 ∈R D converges to an output of the corresponding
+IBNN layer. Moreover, under the assumptions of Corollary 3.1,Φ(z (n))converges to the unique output of the IBNN layer
+layer from any initial guessz (0) = (z(0)
+i )D
+i=1.
+ProofUnder the assumptions of Prop. 2, the energyE λ(·;Mx−b) possesses a minimum as it is continuous and coercive.
+Moreover, the sequence (12) corresponds to the gradient descent algorithm associated to this energy, whereτ (n) is the step
+size at iterationn. Then, the convergence ofz (n) to a critical point ofE λ(·;Mx−b) is guaranteed ifτ (n) is well-chosen
+(e.g.τ (n) satisfies the Wolfe conditions). As the critical points ofE λ(·, Mx−b) correspond to the solutions of Eq. (4), it
+shows that the sequence Φ(z(n)) converges to an output of an IBNN layer if Φ is continous. Moreover, under the assumptions
+of Corollary 3.1, there is uniqueness of the critical point ofE λ(·, Mx−b), which guarantees the convergence of the sequence
+Φ(z(n)) to the unique output of an IBNN layer. □
+This iterative algorithm represents an intuitive and natural approach to the output of the IBNN layer. How-
+ever, in the conditions where the solution of the system of coupled implicit equations of Eq. (4) exists and unique,
+the proposed layer is agnostic to the specific algorithm leading to such solution: the practical implementation of
+the layer could, therefore, be based on any fixed-point or root-finding algorithm able to efficiently solve the task,
+as discussed later in the context of the effective implementation used for the experimental evaluation.
+Finally, we give a family of functions satisfying the desirable properties aforementioned.
+Proposition 4The function
+Sp :z7→ ln(cosh(pz))
+p , p∈R + (13)
+satisfiesS p(z)≤ p
+2 z2, is positive, even, twice differentiable, and convex, and its second order derivative is bounded above by
+p.
+ProofIt is clear thatS p is positive and even. Moreover, the trigonometric inequality cosh(z)≤e
+z2
+2 [41] and the monotonicity
+of the logarithm yield
+ln(cosh(pz))
+p ≤ p
+2 z2 .
+Finally, the functionS p is clearly twice differentiable, and it is convex with second order derivative bounded above by
+pas
+S′
+p(z) = tanh(pz) (≜σ(z)) (14)
+and
+S′′
+p (z) = p
+cosh2(pz)
+,
+from which we obtain that
+0< S ′′
+p (z)≤p.
+□
+Corollary 4.1The family of functionsσ p(z) = tanh(pz)fulfills the requirements of Corollaries 3.1 and 3.2 and therefore
+for the uniqueness of the solution of Eq.(4).
+IBNN in matrix notation
+IBNN layers based on neurons according to Eqs. (3)-(4) can be written in a compact manner using multivariate
+functions and using matrix notation: we briefly define it next because it greatly clarifies certain proofs and results
+included in the following paragraphs.
+11
+
+
+===== PAGE 12 =====
+• Let the affine function A :R N →R D be
+A(x) = Mx−b,(15)
+with A∈ M D×N (R) andb∈R D.
+• Let the non-linear function B :R D →R D be defined component-wise as B(z)= (Bi(z))D
+i=1, where
+Bi(z)=
+DX
+k=1
+wik σ(zk −z i).(16)
+• Let the function F :R D →R D be implicitly defined, using B and withλas a hyperparameter, as
+F(y;λ) ={z|z=y−λB(z)}.(17)
+• And let Φ :R D →R D be defined using a 1D component-wise outer activationϕas
+Φ(z) = (ϕ(z i) )D
+i=1 .(18)
+Through these, Eqs. (3)-(4) defining IBNN can be condensed into
+IBNN = Φ◦F(·;λ)◦A (19)
+while SM can be condensed into
+SM = Φ◦A.(20)
+Expressivity
+Number of SM neurons required to reproduce the operation of an IBNN layer ofD
+neurons
+Due to the entanglement between their outputs and their implicit nature, the operations performed by IBNN
+layers cannot be efficiently represented using SM neurons, which act individually and whose operation is purely
+forward. To reinforce this idea, we will show that, even for infinitesimalλ, approximating the behavior of an IBNN
+layer ofD-neurons could only be achieved, under the SM paradigm, with a number of neurons that is orders of
+magnitude higher.
+To this end we will leverage the first-order Taylor expansion of the operation performed by the IBNN layer
+aroundλ= 0. First, and using implicit differentiation on the matrix notation of Eq. (19), the derivative with
+respect toλis
+∂IBNN
+∂λ = DΦ ∂F
+∂λ ,with ∂F
+∂λ =−
+
+IdD×D+λDB
+−1
+B,(21)
+which yields the expansion
+^IBNN(x) = IBNN |λ=0(x) +λ ∂IBNN
+∂λ
+
+λ= 0
+= Φ
+
+A(x)
+
+−λDΦ B
+
+A(x)
+
+.(22)
+The calculation of the linearization (22) of the IBNN layer, composed of 2 summands, would require the following:
+• Thei-th component of the first summand would require the calculation of the vector multiplication (plus offset)
+Ai(x) =m T
+i x−b i plus the application of the non-linearityϕ, which coincides with operation of a SM neuron.
+• Thei-th component of the second summand would require the product of B i(A(x)) with a scalar factor, since
+the matrix DΦ is diagonal. The calculation of B i(A(x)) (see Eq. (16)) entails calculations involving all the
+Dcomponents A k(x),k∈ {1, . . . , D}. In particular, and in line with the discussion in [31] for convolutional
+operations, (even if A(x) is presumed precalculated due to its implication in the first summand) the calculation
+of B i requires, first, the calculation of all ‘intermediate’ signalsσ(A k(x)−A i(x)),∀k∈ {1, . . . , D}, requiring
+each a SM neuron with output nonlinearityσ, and then the application of another SM neuron (without output
+nonlinearity) to linearly combine them, resulting intoD+ 1 neurons according to the SM.
+Therefore, even for this first-order approximation of a layer ofDIBNN neurons, which would neglect further
+nonlinear behavior that that the real IBNN layer would have, would require at leastD(D+ 2) neurons according
+to the SM paradigm.
+12
+
+
+===== PAGE 13 =====
+A universal approximation theorem (UAT) for IBNN
+A whole panoply of UATs regarding the ability of the SM-layers to approximate arbitrary functions exists [28, 42],
+differing on their respective assumptions about the type of network the SM layer is part of. The most widespread
+version of the UAT for the SM refers to networks composed of a single hidden SM layer with a linear combination
+of its outputs, that is, the class of functions
+HSM =
+n
+x7→c·SM(x; M,b) =c·Φ (Mx−b )
+o
+,(23)
+where Φ i =ϕis a non-polynomial activation and wherex∈X⊂R N,Xcompact (note its correspondence with
+the SM neurons defined by Eqs. (1)-(2)), and its proof consist in showing that the set (23) is dense in the space
+of continuous functionsC(X) [42]. (Note that we have explicitly included the matrix M and offset vectorbin the
+notation of the SM in Eq. (23).)
+We will analogously prove that the class of functions
+HIBNN′ =
+
+x7→ ˜c·SM
+
+IBNN(x; M,b, λ); ˜M, ˜b
+
+= ˜c·Φ
+
+˜M IBNN(x; M,b, λ)− ˜b
+
+,(24)
+again with a non-polynomial activationϕand defined forx∈K⊂R N compact, is dense in the space of functions
+C(X). Note thatH IBNN′ corresponds to an IBNN layer followed by a SM layer and a linear combination of the
+outputs of the latter.
+Proposition 5For everyf∈ C(X)and everyϵ >0there exists ˜f∈ H IBNN′ such that
+sup
+x∈X
+f(x)− ˜f(x)
+ < ϵ .
+ProofBy the UAT forH SM, for any givenf∈ C(X) there existc, M, andbsuch that the approximating function
+g(x) =c·Φ(Mx−b) satisfies
+sup
+x∈X
+f(x)−g(x)
+ < ϵ
+2 .
+For this proof, let us assume that the nonlinearityϕis injective; although ReLU, the prototypical activation function and
+the basis for the experiments in this manuscript, is in fact not injective, we could assume, without any loss of generality for
+the purpose of this proof, a family of injective softplus functions with uniform convergence to it. This allows the definition
+and use of the left inverse Φ −1
+left such that Φ−1
+left ◦Φ = Id. In addition, forλwhere F(·;λ) is single valued and is injective,
+the L(·;λ) :R D →R D such that
+L(z;λ) =z+λB(z),(25)
+is well defined and is, it and straightforwardly (see Eq. (17)) the left-inverse of F(·;λ) and thus L(·;λ)◦F(·;λ) = Id. Using
+these two maps, we can define the function H(·;λ) :R D →R D as H(·;λ) = L(·;λ)◦Φ −1
+left, which (represents by construction
+a partial, left inverse of the IBNN layer and) yields
+H
+
+IBNN(x; M,b, λ);λ
+
+= A(x) = Mx−b.(26)
+Let us define a new functionh(v) =c·Φ( H(v;λ) ) based on the parametercand the function Φ of the approximating
+functiong(x) above and on the function H(·;λ) just defined. The domain of definitionVofhis also compact, since
+V= IBNN(X) and IBNN is continuous. Additionally,his continuous, since it is the composition of continuous maps.
+Leveraging again the UAT for the SM, this time on the compact domainV, there exist new ˜c, ˜M, and ˜bsuch that
+sup
+v∈V
+h(v)− ˜c·Φ( ˜Mv− ˜b)
+ < ϵ
+2 .
+Since, using Eq. (26), we have
+h
+
+IBNN(x; M,b, λ)
+
+=c·Φ
+
+H
+
+IBNN(x; M,b, λ);λ
+
+=c·Φ(Mx−b) =g(x).
+Therefore, the functionh◦IBNN(·; M,b, λ) yields the claim through the triangle inequality.□
+Comparative analysis of the robustness of IBNN
+Reduced sensitivity of IBNN with respect to input perturbations
+The following analysis, based on the matrix notation of Eqs. (15)-(20), compares the behavior of IBNN and SM
+layers regarding their sensitivity to input perturbation on the assumption that IBNN and SM nets having identical
+affine transforms (Eq. (15)) and scoring head serve to the same classification problem (Supplementary Information).
+13
+
+
+===== PAGE 14 =====
+Local perturbations
+What follows demonstrates that the output of the layers and of the classifier ANNs based on the newly proposed
+IBNN neurons are less sensitive to infinitesimal perturbations of their inputs than their SM counterparts, by virtue
+of the analysis of their Jacobian matrix.
+Using implicit derivation [34] under the assumption that F(·;λ) (see Eq. (15)) is a differentiable function
+z(y) = F(y;λ) of its inputxwe can write
+d
+dy z(y) = IdD×D−λ dB
+dz
+d
+dy z(y).(27)
+Reordering the terms and using the more compact symbol D(·) |(·) to denote the absolute derivative calculated at
+the point indicated by its subscript yields
+dz
+dy = DF|y =
+
+IdD×D+λDB |F(y)
+−1
+≜K ∞|F(y) .(28)
+In the following we will refer to this term as DF |y or K∞|F(y).
+Using Eq. (28), the Jacobian matrix of IBNN can be written through the application of the chain rule to
+Eq. (19) as
+D IBNN|x = DΦ|(F◦A)(x) K∞|(F◦A)(x) DA,(29)
+where we have used that DA |x = DA = M, constant for the whole input space. Note that, based on the vector
+formulation of Eq. (15), the Jacobian matrix of SM is
+D SM|x = DΦ|A(x) DA = DΦ|A(x) IdD×DDA,(30)
+which highlights the analogies between D SM |x and D IBNN|x but also the decisive interposed term K ∞|(F◦A)(x)
+present in the expression Eq. (29) of the latter. For convenience and for the sake of clarity, we will henceforth drop
+the explicit indication of the calculation point of each derivative.
+Taking a deeper look into the shape and behavior of K ∞, we have that
+DB =
+
+DBij
+
+i,j∈{1,...,D}
+,with DB ij =
+
+
+
+−
+X
+∀k̸=i
+h
+wik σ′(zk −z i)
+i
+j=i
+wij σ′(zj −z i)j̸=i
+,(31)
+which means that, by virtue of the assumptionsw ji =w ij andσodd, DB is symmetric, which in turn implies
+that it is diagonalizable and that it can be written as DB = Q Ξ Q T for a certain real orthogonal matrixQand a
+real diagonal matrix Ξ = diag{ξ 1, . . . , ξD}. The fact that, additionally, each element in the main diagonal of DB
+is exactly the negative sum of the rest of elements of its row has interesting additional implications:
+• Columns are linearly dependent, and thus at least one eigenvalue is 0 (and its corresponding eigenvalue is in
+fact the uniform vector 1√
+D (1, . . . ,1)).
+• Sincew ik andσ ′ are non-negative, DB is a symmetric diagonally dominant matrix with real non-positive diagonal
+elements, which makes it negative semidefinite and implies thatξ i ≤0,∀i∈ {1, . . . , D}. (In fact, by virtue of
+Gershgorin circle theorem, all the eigenvalues are within the intervalξ i ∈ [ −2 maxi|DBii|,0 ].
+These implications result (ordering eigenvalues in decreasing order of magnitude (|ξ 1|≥. . .|ξ i|≥ |ξ D|) without any
+loss of generality) in Ξ = diag{ξ 1, . . . , ξ i, . . . , ξ D−1,0}, whereξ i ≤0,∀i∈ {1, . . . , D−1}. The injection of the
+above properties of DB into the expression of K ∞, includingξ D = 0, yields
+K∞ =
+
+IdD×D +λQ Ξ Q T
+−1
+= Q
+
+IdD×D+λΞ
+−1
+QT
+= Q diag
+ 1
+1 +λξ 1
+, . . . , 1
+1 +λξ i
+, . . . , 1
+1 +λξ D−1
+,1
+
+QT .
+(32)
+This expression directly represents the diagonalization of K ∞ and links its eigenvaluesk i one-to-one to the from
+the respective eigenvaluesξ i of DB ask i = 1
+1+λξi
+.
+Since, as previously discussed,ξ i ≤0,∀i∈ {1, . . . , D−1}, we can conclude that anyλ≤0 would ensure that
+all the eigenvaluesk i of K ∞ are in the range (0,1] and thus|k i|≤1. Forλ >0, however,|k i|≤1 is only fulfilled
+depending on the relative values ofξ i andλ, and in particular forλ≥ − 2
+ξi
+. In bothλ >0 andλ <0 cases K ∞
+has at least one eigenvalue exactly 1.
+The norm∥K ∞∥2, representing the worst-case direction regarding vector stretch, is 1; nevertheless, the direc-
+tions corresponding to eigenvectors of eigenvalues strictlyξ i <0 are compressed by the effect of K ∞. This implies
+that,∀δy∈R D,∥K ∞ δy∥2 =k∥δy∥ 2 for somek∈(0,1] dependent on the specificδy, which implies, in turn,
+14
+
+
+===== PAGE 15 =====
+∥D IBNNδx∥ 2 =∥DΦ K ∞ DAδx∥ 2
+≤ ∥DΦ∥ 2 ∥K∞ DAδx∥ 2 ≤ ∥DΦ∥ 2 ∥DAδx∥ 2 , (33)
+where the second line results from the definition of the norm∥·∥ 2, ensuring∥Ψδx∥ 2≤ ∥Ψ∥ 2∥δx∥2. Finally, from
+this result and the relationship between Eq. (29) and (30), and under the assumption that both IBNN and SM
+share a similar A and are working under the same locally-linear region of the non-linear activation Φ and thus
+DΦ|A(x) = DΦ|(F◦A)(x), we have
+∥D IBNNδx∥ 2
+∥δx∥2
+≤ ∥D SMδx∥ 2
+∥δx∥2
+,(34)
+which would suggest, according to the reasoning in [23], a naturally improved robustness against adversarial attacks.
+The above analysis for individual IBNN and SM layers also applies to networks having a backbone composed
+of a sequence of them. Suppose that we have respective IBNN- and SM-based backbones ofLlayers according to
+IBNN(1:L) = IBNN(L) ◦ · · · ◦IBNN (l) ◦ · · · ◦IBNN (1) ,with IBNN (l) = Φ◦F (l)(·;λ (l))◦A (l) (35)
+and
+SM(1:L) = SM(L) ◦ · · · ◦SM (l) ◦ · · · ◦SM (1) ,with SM (l) = Φ◦A (l) .(36)
+The application of the chain rule, along with Eq. (29) and (30), yields, respectively,
+DIBNN(1:L) = DIBNN (L) · · ·DIBNN (l) · · ·DIBNN (1)
+= DΦ (L) K(L)
+∞ DA(L) · · ·DΦ (l) K(l)
+∞ DA(l) · · ·DΦ (1) K(1)
+∞ DA(1) (37)
+and
+DSM(1:L) = DSM (L) · · ·DSM (l) · · ·DSM (1)
+= DΦ (L) IdD×DDA(L) · · ·DΦ (l) IdD×DDA(l) · · ·DΦ (1) IdD×DDA(1) . (38)
+For each IBNN layer withλ (l) ≤0 we have that,∀δy∈R D,∥K (l)
+∞ δy∥2 =k (l)∥δy∥2 for somek (l) ∈(0,1] dependent
+on the specificδy. Using sequentially this fact along with the definition of the norm∥·∥ 2 yields
+∥DIBNN(1:L) δx∥2 =
+
+
+
+ DΦ(L) K(L)
+∞ DA(L) · · ·DΦ (l) K(l)
+∞ DA(l) · · ·DΦ (1) K(1)
+∞ DA(1) δx
+
+
+
+
+2
+≤ ∥DΦ (L)∥2
+
+
+
+ K(L)
+∞ DA(L) · · ·DΦ (l) K(l)
+∞ DA(l) · · ·DΦ (1) K(1)
+∞ DA(1) δx
+
+
+
+
+2
+=k (L) ∥DΦ(L)∥2
+
+
+
+ DA(L) · · ·DΦ (l) K(l)
+∞ DA(l) · · ·DΦ (1) K(1)
+∞ DA(1) δx
+
+
+
+
+2
+...
+≤k (L) · · ·k (1)
+
+∥DΦ(L)∥2 ∥DA(L)∥2· · · ∥DΦ(1)∥2 ∥DA(1)∥2
+
+∥δx∥2 .
+(39)
+The fact that we have, analogously,
+∥DSM(1:L) δx∥2 =
+
+
+
+DΦ(L) DA(L) · · ·DΦ (1) DA(1) δx
+
+
+
+
+2
+≤
+
+∥DΦ(L)∥2 ∥DA(L)∥2· · · ∥DΦ(1)∥2 ∥DA(1)∥2
+
+∥δx∥2 ,
+(40)
+along with the fact thatk (l) ≤1,∀l∈ {1, . . . , L}, suggests that the sensitivity of the IBNN-based multilayer
+backbone to perturbations of its input is lower than its SM-based counterpart.
+Global perturbations
+What follows demonstrates that the output of the layers based on the newly proposed IBNN neurons are, globally,
+less affected by perturbations of their inputs than their SM counterparts. The demonstration stems from the
+functionals introduced to prove the existence and uniqueness of the solution of IBNN (Eq. (5), Methods).
+15
+
+
+===== PAGE 16 =====
+Proposition 6Letx∈R N ,N x a neighborhood ofx, andy∈ N x. Under the assumption thatλ≤0,the functionSinf λ
+is convex, andΦis a similarity inF ⊂R D such that
+F ⊃ {prox fλ(A(Nx))} ∪ {A(Nx)},
+we have
+∥IBNN(x; M,b, λ)−IBNN(y; M,b, λ)∥ ≤ ∥SM(x; M,b)−SM(y; M,b)∥ ∀y∈ N x.
+ProofIfλ≤0 and the functionSin Eq. (5) is convex, then−f λ is convex. Together with the fact that−f λ is con-
+tinuous and proper, we have that the variational problemarg min
+z
+Eλ(z; A(x)) is the proximal operator prox −fλ(A(x))
+of−f λ evaluated at A(x), which leads to the existence and uniqueness of the solution of Eq. (4) and consequently of
+IBNN(x; M,b, λ)∀x∈R N.
+By property of proximal operators, we then have that
+∥prox−fλ(A(x))−prox −fλ(A(y))∥ ≤ ∥A(x)−A(y)∥ ∀x,y∈R N .
+We deduce that, under the assumption that Φ is a similarity, i.e. an isometry scaled by a constant, inF ⊂R N such that
+F ⊃ {prox −fλ(A(Nx))} ∪ {A(Nx)},
+we have
+∥Φ(prox−fλ(A(x))−Φ(prox −fλ(A(y))∥ ≤ ∥Φ(A(x))−Φ(A(y))∥ ∀y∈ N x ,
+i.e.
+∥IBNN(x; M,b, λ)−IBNN(y; M,b, λ)∥ ≤ ∥SM(x; M,b)−SM(y; M,b)∥.
+□
+Inconclusive evidence about accuracy-stability tradeoff, unlike for the SM
+Bastounis et al. [6] demonstrated that multilayer SM-based ANNs with continuous nonlinear activations such as
+ReLU achieving a successful accuracy become universally unstable (see [6] Theorem 2.2 (ii)), which represents a
+formal proof that SM-based nets are subject to an inherent tradeoff between accurate and stability.
+Their proof depends on the standard deep neural network structure Ψ whoseLlayers follow the form of
+Eqs. (1)-(2); that is, and using the notation of Eq. (15) and (18), it can be expressed as the composition Ψ =
+A(L) ◦Φ◦A (L−1) ◦· · ·◦Φ◦A (l) · · ·◦Φ◦A (1), where Φi =ϕis a continuous nonlinear function applied coordinate-wise
+such as ReLU and A(l) are affine functions. A key factor in their proof depends on this standard network structure
+affording a linearization on finite but arbitrarily large sets ([6] lemma 5.5), a property which does not directly
+carry over to the implicit and highly nonlinear IBNN formulation. This linearization is critical in the construction
+of arbitrarily large sets where the output of the standard model neural network with fixed dimensions fails to
+match the true classification function output ([6] lemma 5.4). Thus the accuracy-stability tradeoff established in
+[6] does not directly apply to the IBNN.
+IBNN is resistant to single-neuron stealth attacks
+We define an ANN composed of one single hidden layer according to the IBNN paradigm and with uniform weights
+wik so
+zi(x) =m T
+i x−b i − λ
+D
+DX
+k=1
+σ(zk(x)−z i(x)) (41)
+vi(x) =ϕ(z i(x)) (42)
+and one single output layer so the output score of the resulting IBNN ANN is:
+s(x) =
+NX
+i=1
+civi(x).(43)
+Following [24], we say that a successful single-neuron stealth attack on the IBNN ANN yielding the scoring
+functionswould be a modified IBNN ANN with the same artificial units of the original plus an extra IBNN neuron
+and yielding a scoring functions a such, given a verification input setV, known to the owner of the systemsbut
+unknown to the attacker, andϵ≥0, ∆>0,
+1. for some inputx T , known to the attacker but not to the owner of the network,|s a(xT )−s(x T )|≥∆, and
+2. for every inputx v ∈ V,|s a(xv)−s(x v)|≤ϵ.
+16
+
+
+===== PAGE 17 =====
+Condition (1) implies that the attacker makes the ‘hacked’ networks a respond to a trigger inputx T in a way that
+is different from what the originalsdoes, whereas condition (2) implies that the system owner will not be able to
+tell that an attack has taken place, that the original networkshas been modified, because the responses of the
+hacked networks a onVare very similar to those of the original networks.
+The hacked networks a is
+sa(x) =
+NX
+i=1
+ciˆvi(x) +c aˆvN+1(x) (44)
+ˆvi(x) =ϕ( ˆzi(I)) (45)
+ˆzi(x) =m T
+i x−b i − λ
+D
+D+1X
+k=1
+σ(ˆzk(x)− ˆzi(x)) (46)
+Letx T be a trigger, such that the magnitude of the attack it produces is ∆; takingϕto be the ReLU function
+and assuming that the network units are working in the linear range ofϕ, we have
+∆ =|s a(xT )−s(x T )|=
+
+DX
+i
+ci
+
+ˆvi(xT )−v i(xT )
+
++c aˆvD+1(xT )
+ .(47)
+IfD≫1 we may assume that adding a single neuron does not change significantly the sum PD
+k=1 σ(zj(x)−z i(x)),
+since only one term is added to the summation; therefore, we have ˆzi ≃z i and hence
+∆≃ |c a ˆzD+1(xT )|.(48)
+Additional, we have
+ˆzD+1(xT ) =m T
+D+1xT − λ
+D
+D+1X
+k=1
+σ(ˆzk(xT )− ˆzD+1(xT )),(49)
+where, for simplicity, we have chosenb D+1 = 0. Combining Eqs. (48) and (49) we get
+
+∆
+ca
+ =
+ mT
+D+1xT − λ
+D
+D+1X
+k=1
+σ
+
+ˆzk(xT )± ∆
+ca
+ (50)
+mD+1 = xT
+||xT ||2 (± ∆
+ca
+± λ
+D
+D+1X
+k=1
+σ(ˆzk(xT )± ∆
+ca
+)) (51)
+mD+1 ∝x T (52)
+This proves that we can find a filterm D+1 so that the inputx T produces very different outputs insands a: the
+difference between the outputs of both networks has an amplitude of ∆, which would fulfill the first requirement
+of the stealth attack.
+Now we need to check the second requirement, i.e. that the outputs for the verification set remain unaltered,
+or change very little forx v ∈ V. Using analogous assumptions to the reasoning above, the difference ∆ v between
+sa(xv) ands(x v) is
+∆v ≃ |c a ˆzD+1(xv)|.(53)
+We would like ∆v to be negligible, e.g. ∆ v ≃0, which gives ˆzD+1(xv)≃0, and from the definition of ˆzD+1 we get
+mT
+D+1xv = λ
+D
+DX
+k=1
+σ(zk(xv)) (54)
+So, in order for the stealth attack to be actually stealth, undetectable, all the inputs in the verification setVshould
+satisfy Eq. (54). But this is an implicit equation onx v, whose solutions, if any, might be totally unrelated to the
+elements ofV, which is a set that is only known to the system owner, not to the attacker.
+In conclusion, condition (2) for the stealth attack is not satisfied, and therefore we can say that single-neuron
+stealth attacks on a IBNN are unfeasible.
+17
+
+
+===== PAGE 18 =====
+Resistance to memorization
+Here we show that IBNN is less prone to memorization by following the procedure suggested by Garg et al. [30],
+where the tendency of an ANN to memorize its training data is evaluated by computing the curvature of the loss
+function with respect to the input: lower curvature means less memorization.
+Let Ψ be a binary classifier with a single hidden layer and a fully-connected (FC)-based scorers:R D →R
+according to
+s(x) =c T IBNN(x)−c 0 ,
+and a subsequent probability assignment according to Ψ(x) =P (s(x)), wherec∈R D, andc 0 ∈Rand where
+P:R→[0,1] is a function providing the probability of the class 1 (for two classes, with respective labels 0 and 1),
+e.g. a softmax summarization makingythe probability of choosing the label 1, complementary of the probability
+of choosing the label 0. Additionally, let the loss for the training pair (x, y t) (tfortruth) be the Mean Squared
+Error (MSE), that is,L(x;y t) = (Ψ(x)−y t)2. The derivative of the loss with respect to the input is, by virtue of
+the chain rule,
+∂LIBNN
+∂x = 2
+
+Ψ(x)−y t
+
+P ′(s(x))c T D IBNN|x .(55)
+An analogous expression ∂LSM
+∂x would correspond to an analogous SM-based network,mutatis mutandis.
+The exact expression for D IBNN |x in Eq. (55) is provided by Eq. (29) — it is the product of the terms
+DΦ|(F◦A)(x), K∞|(F◦A)(x), and DA, which can be approximated as follows:
+• DΦ≈Id D×D, assuming that the IBNN outer activation is a ReLU and that the network is working within its
+linear range;
+• K∞|(F◦A)(x) ≈Id D×D−λDB |A(x), assuming|λ|≪1, (F◦A)(x)≈A(x) and using the first-order Taylor expansion
+of Eq. (28).
+Accordingly, D IBNN|x can be approximated as
+D IBNN|x ≈
+
+IdD×D−λDB |A(x)
+
+DA (56)
+which, in scalar notation and identifyingz i = IBNNi(x), is
+∂zi
+∂xj
+≈m ij −λ
+X
+k
+wikσ′
+
+(mT
+k −m T
+i )x
+
+(mkj −m ij).(57)
+Assuming thatσis piece-wise linear with central slopep(i.e.σ(z) =−1,∀z <− 1
+p;σ(z) = 1,∀z > 1
+p; and
+σ(z) =pz,∀|z|< 1
+p), that the weightsw ik are uniform withw ik = 1
+D ,∀i, k∈ {1, . . . , D}, and that the norm of
+mT
+i xdoes not vary significantly for different unitsiand thus|(m T
+k −m T
+i )x|≪1, we can write
+∂zi
+∂xj
+≈m ij −λp
+ DX
+k=1
+mkj
+D
+!
++λ p m ij = (1 +λp)m ij −λp
+ 
+1
+D
+DX
+k=1
+mkj
+!
+. (58)
+We now make the common assumption that the neurons have a reduced receptive field, i.e. each neural unit
+receives inputs from a small amount of coordinates ofx. Then, the matrix whose rows are the filtersm T
+i is sparse,
+and with bounded filter elements (e.g.|m ij|≤1,∀i, j) we get| 1
+D
+PD
+j=1 mkj |≪1, which, plugged in Eq. (58), gives
+∂zi
+∂xj
+≈(1 +λp)m ij ,(59)
+where, just as a note,λ= 0 would correspond to the SM.
+With this relationship between derivatives with respect to the input for IBNN and for SM, and going back to
+Eq. (55), we have
+∂LIBNN
+∂xj
+≈(1 +λp) ∂LSM
+∂xj
+.(60)
+Since, according to [30], the magnitude of the curvature of the loss function w.r.t. the input can be estimated as
+Curv(x)∝
+
+
+
+
+
+∂L(x+hg)
+∂x − ∂L(x))
+∂x
+
+
+
+
+
+2
+,(61)
+18
+
+
+===== PAGE 19 =====
+whereg∈R N are vectors sampled from a Rademacher distribution, the above approximation yields
+CurvIBNN(x) = (1 +λp) 2 CurvSM(x) (62)
+Given that that the magnitude of the curvature is a measure of memorization [30], Eq. 62 shows that with a
+proper choice of (λ, p) (s.t.|1 +λp|<1) IBNN memorizes less than a SM network.
+Implementation of the IBNN layers
+Trainable IBNN layers have been custom-implemented in Python using the design principles and the utilities
+provided by PyTorch [43] for both ANN training and evaluation. The implemented IBNN layers are analogous to
+and mostly interchangeable with the SM layers available in PyTorch, thus easing comparisons.
+Two types of IBNN layers, convolutional and fully-connected (FC), have been implemented, which are, respec-
+tively, analogous to convolutional and FC layers according to the SM paradigm. The two types differ in the spatial
+limitations imposed on the linear filters represented by the elements{m i, bi}(see, respectively, Eq. (2) and (4)):
+convolutional layers have been achieved by shaping the filter elements{m i, bi}to correspond to a square mask
+and tying them across all the neurons of the same layer.
+As highlighted before, the outputvof an IBNN layer for a certain inputxcorresponds to the solution of a
+system of coupled implicit equations (Eqs. (3)-(4)), which represents a challenge for both forward and backward
+(i.e. training) operations. The library TorchDEQ [44], providing both operations, is the engine of the implicit
+calculations of our implementation of the IBNN layer:
+• The forward operation of the IBNN layer, which is an implicit, but more specifically, fixed-point calculation, has
+been performed using the default forward solvers provided by TorchDEQ, in particular Broyden’s method [44].
+Additionally, a forward solver specifically tailored to IBNN and based on the minimization of Eq. (5) through
+the procedure of Eq. (12) has also been implemented. Neither showed convergence rates that would advise a
+preference for one over the other, and they have been used interchangeably.
+• The backward operation, required for training, has been performed using the default forward solvers provided
+by TorchDEQ, in particular Broyden’s method [44].
+Our implementation of the IBNN layers allows for networks with independentλs at each layer, and for fixed
+or trainableλs: the latter option has been used in certain experiments as a sort of tentative hyperparameter
+optimization.
+Experimental details
+Datasets
+The image classification experiments were based on three datasets of increasing difficulty level, each one contain-
+ing 10 classes: Fashion-MNIST [45], SVHN [46], and CIFAR-10 [47]. These datasets have been used from their
+respective built-ins in the module Torchvision [48] of PyTorch [43]. Fashion-MNIST consists of 28×28 grayscale
+images of clothing, for a total of 60,000 training and 10,000 test images; their comprised classes are T-shirt/top,
+trousers, pullover, dress, coat, sandal, shirt, sneaker, bag, and ankle boot. SVHN consists of 32×32 color images of
+digits from 0 to 9, obtained as croppings of real street images, for a total 73,257 training and 26,032 test images.
+And CIFAR-10 consists of 32×32 color images of animals and vehicles, for a total of 50,000 training and 10,000
+test images; their comprised classes are airplane, automobile, bird, cat, deer, dog, frog, horse, ship, and truck.
+The visualizations in Fig. 2 correspond to a custom 2D dataset, generated using a custom defined mask
+containing the two concentric arrows hosting the 2D samples of the two separated classes: the samples of each
+class were generated by ‘accept-reject sampling’ from a 2D uniform distribution with a support comprising their
+respective masks. The resulting 2D samples where generated in the form of 2-pixel images for compatibility with
+the image-oriented implementation of the classifiers.
+Network architectures used in the experimental evaluation
+The classifier ANNs used in the presented experimental evaluation, which we will refer to as uniform convolutional
+networks (UCNs) and which will be denoted using the convention UCN(L, C), is a simplified architecture composed
+of:
+• A backbone formed ofLsequential blocks of analogous characteristics (hence the nomenclature ‘uniform’). Each
+blockl∈ {1, . . . , L}contains a convolutional layer, defined according to the SM or IBNN depending on the
+case, and a batch normalization layer for its output. In all cases, the convolutional layer maintains (through
+zero padding) the spatial size of its input image but producesCchannels at its output, and the side of the
+convolutional filters is in all cases the 15% of the size of its input image. ReLU is used as the output nonlinearity
+ϕ(Eq. (1) and (3)) of all layers.
+19
+
+
+===== PAGE 20 =====
+• An output scoring head composed of one single FC layer (according to the SM) with as many neurons as classes
+contained in the dataset.
+For convolutional layers according to IBNN, additionally, uniform weightsw ik = 1
+D and a dendritic nonlinearity
+σ(z) = tanh(pz) withp= 10 is used. This value ofpwas chosen for two reasons: it is an intermediate value
+regarding boundary flexibility (see Fig. 2); and it ensures existence and uniqueness of IBNN in the considered
+ranges ofλ(see Eq. (14)). The parameterλ l of each layerl∈ {1, . . . , L}is set or trained individually.
+All experiments shown in Results correspond to the described UCN architecture. However, experiments cor-
+responding to different datasets and aimed aspects differ inLandC. For each dataset, all experiments gravitate
+around a configuration UCN(Ld, Cd) whoseL d andC d were set in order to achieve base accuracies in the range of
+65−90%. This central configuration was, for each dataset: for Fashion-MNIST, UCN(1,3); for SVHN, UCN(2,3);
+and for CIFAR-10, UCN(3,8). All the experiments correspond to said central configurations but for two exceptions:
+experiments related to expressivity compare network sizes by varying the number of channels, and thus correspond
+for each dataset to theLindicated above but capture different values ofC(see Fig. 6); and the result included in
+Fig. 7 for CIFAR-10, corresponding to UCN(3,16) is the only departure from these configurations: although both
+C=8 andC=16 similarly reproduce the same positive trend regarding learning speed, it was determined that the
+latter illustrates the concept better.
+The visualizations in Fig. 2, however, correspond to a network with a backbone of a single hidden layer of
+FC type composed of 3 neurons (according to the SM or IBNN depending on the case) with a ReLU output
+nonlinearity and a batch normalization layer, followed by a single layer head/unit leading to a binary classification.
+Training and evaluation details for IBNN and SM-based networks
+Training of both SM- and IBNN-based ANNs was performed using Stochastic Gradient Descent (SGD). The
+adoption of SGD, instead of other more dynamic optimizers such as Adam, is motivated by two reasons: the latter
+requires the calculation of higher-order moments and therefore conveys a larger computational burden; and the
+simplicity of SGD has been regarded as more controllable by experimenters with respect to the more obscure
+optimization steps of the latter. A scheduler composed of a linear warmup from 0.001 to 0.01 in 40 epochs and
+a linear decay symmetric to the former was used for the learning rate (LR). This scheduler was chosen because
+it represents a favorable trade-off between stability with respect to the initial random weights of the network,
+reasonable speed due to the higher LR during the central epochs, and better convergence due to the final cooldown.
+A warmup training step of 2 epochs was incorporated prior to the training of both SM- and IBNN-based ANNs.
+In the specific case of the IBNN-based nets, this warmup was performed on a SM-based surrogate with an identical
+architecture to that of the target IBNN; the training of the IBNN net itself starts by initializing its weights with the
+weights resulting from the warmup of the surrogate (see Eqs. (2) and (4), and consider also the batch normalization
+and head of the UCN). This surrogate-based warmup has been introduced to ensure favorable initializations of
+IBNN-based ANNs and to avoid those rare cases where random initializations without such warmup did not allow
+training to progress to viable classifiers.
+Each model (labeled in each case as IBNN or SM) in each experiment in Results was obtained as the median
+of several instances of the same model, trained independently from distinct random initial weights and dataset
+reordering: the results addressing expressivity (Fig. 6) and memorization (Fig. 8) aggregate 10 instances for the
+SM nets and 5 for the IBNN nets; the results addressing decreasing percentages of the training data (Fig. 3) and
+learning speed (Fig. 7) aggregate 20 instances for the SM nets and 5 for the IBNN nets. Corresponding confidence
+intervals of 90% are included in all cases. Additionally, the results illustrating learning speed (Fig. 7) perform a
+running average of 3 epochs.
+Adversarial attack generation and evaluation details
+The respective adversarial robustness (AR) of SM- and IBNN-based nets has been assessed using two adversarial
+attacks (AAs) of very different nature to better characterize the abilities of the proposal: PGD [25] and Pixle [26].
+In both cases, attacks have been generated using the library TorchAttacks [49] from the validation subset of each
+dataset.
+Originally, PGD is a white-box attack that presumes the full availability of the target ANN and its gradient with
+respect to variations in its input. It performs a number of gradient-based iterations and limits its operation to a
+maximum distance with respect to the image from which it is calculated, denoted asϵ. However, our implementation
+based on IBNN prevents the calculation of such a gradient and thus the feasibility of direct PGD attacks, analogous
+to the gradient masking/obfuscation defenses against AAs. Nevertheless, the literature has shown that attacks
+generated using differential surrogate models are usually effective for attack generation [50, 51]. Accordingly, while
+PGD attacks for the SM-based ANNs have been generated in a purely white-box manner, the PGD attacks for
+the IBNN-based ANNs have been produced using a SM-based surrogate model, as follows: each trained IBNN
+layer has been replaced by the SM layer resulting from simply removing the nonlinear bias of Eq. (4) (identical to
+20
+
+
+===== PAGE 21 =====
+settingλ= 0 for the layer). This type of surrogate model has been selected because it is deemed to be the most
+likely surrogate chosen by a potential attacker due to its similarity to the target IBNN net.
+Conversely, Pixle is purely black-box, working only on the classification probabilities reported by the ANN for
+a given query image, and has been used to directly attack both SM and IBNN without any need for surrogates.
+In this way, it provides a complementary view to the results obtained using PGDviaa surrogate. Pixle gradually
+shuffles an increasing number of pixels from the original image as its so-called restarts advance, and optimizes the
+effectiveness of the newly scrambled pixels at each restart for a certain number of iterations.
+All Pixle experiments presented in this manuscript correspond to an identical attack with a maximum number
+of 10 restarts with 5 iterations each, with the generation of pixel candidates based on similarity and from 3×3
+image patches [26]. The PGD-based attacks presented in this manuscript perform 10 gradient iterations and sweep
+across ranges of attack intensities, fromϵ= 0 to a certain maximum that depends on the dataset under study,
+resulting in the corresponding security evaluation curves [50] for each experimental condition.
+The models subject to adversarial attacks were trained according to the same principles, architectures, and
+hyperparameters indicated above, and, as a result, several instances of each model were obtained and evaluated
+on the clean validation dataset and under attack. The results addressing both PGD (Fig. 4) and Pixle (Fig. 5)
+aggregate, using the median, 5 model instances for the SM nets and 5 for the IBNN nets. Since confidence interval
+estimation would be unreliable for the limited amount of available samples, adversarial attack experiments show
+the complete range of obtained results (equivalent to confidence intervals of 100%).
+Memorization: experimental evaluation
+Memorization occurs when models start learning individual training samples instead of the underlying statisti-
+cal distribution of data: therefore, its occurrence must become apparent on the evolution of the network on its
+validation dataset.
+We devised, consequently, the following experiment: we deliberately contaminated the training subset of a cer-
+tain dataset with different proportions of wrong samples, generated by simply scrambling their labels, while keeping
+the validation subset unscathed; for each considered proportion we trained networks using the contaminated data
+and took the epoch when the corresponding validation accuracy started to permanently decline as a sign of memo-
+rization and overfitting; and we regard such maximum validation accuracy as the level of generalization achievable
+for an ANN on a contaminated dataset.
+Code availability
+The code used to carry out the simulations and analysis is available at https://github.com/vmg-io-csic/ibnn.
+Author contributions
+Conceptualization and methodology: M.B.; mathematical analysis: R.M., T.B., M.B., S.L.; numerical implemen-
+tation: R.M., E.V.S.; experiments: R.M., E.V.S., R.S.M., J.H.M.; analysis of results: all authors; writing: R.M.,
+M.B., T.B., S.L.
+Additional information
+Supplementary information
+The present manuscript refers to Supplementary Information included as an appendix.
+References
+[1] McCulloch, W. S. & Pitts, W. A logical calculus of the ideas immanent in nervous activity.The Bulletin of
+Mathematical Biophysics5, 115–133 (1943).
+[2] Hubel, D. H. & Wiesel, T. N. Receptive fields of single neurones in the cat’s striate cortex.The Journal of
+Physiology148, 574–591 (1959).
+[3] Rosenblatt, F. The perceptron: A probabilistic model for information storage and organization in the brain.
+Psychological Review65, 386 (1958).
+[4] Haykin, S.Neural networks and learning machines(New York: Prentice Hall, 2009).
+[5] Chavlis, S. & Poirazi, P. Dendrites endow artificial neural networks with accurate, robust and parameter-
+efficient learning.Nature Communications16, 943 (2025).
+21
+
+
+===== PAGE 22 =====
+[6] Bastounis, A., Hansen, A. C. & Vlaˇ ci´ c, V. The mathematics of adversarial attacks in AI – Why deep learning
+is unstable despite the existence of stable neural networks. Preprint at https://arxiv.org/abs/2109.06098
+(2021).
+[7] Sartzetaki, C., Roig, G., Snoek, C. G. M. & Groen, I. International Conference on Learning Rep-
+resentations (ed.)One hundred neural networks and brains watching videos: Lessons from alignment.
+(ed.International Conference on Learning Representations)Proceedings of the International Conference on
+Learning Representations(2025).
+[8] Kar, K. & DiCarlo, J. J. The quest for an integrated set of neural mechanisms underlying object recognition
+in primates.Annual Review of Vision Science10, 91–121 (2024).
+[9] Bowers, J. S.et al.Deep problems with neural network models of human vision.Behavioral and Brain
+Sciences1–74 (2022).
+[10] Tong, S.et al.IEEE/CVF Computer Vision Shifts and Pattern Recognition Organizer Committee (ed.)Eyes
+wide shut? Exploring the visual shortcomings of multimodal LLMs. (ed.IEEE/CVF Computer Vision Shifts
+and Pattern Recognition Organizer Committee)IEEE/CVF Conference on Computer Vision and Pattern
+Recognition, 9568–9578 (2024).
+[11] Wichmann, F. A. & Geirhos, R. Are deep neural networks adequate behavioral models of human visual
+perception?Annual Review of Vision Science9, 501–524 (2023).
+[12] Poleg-Polsky, A. Dendritic spikes expand the range of well tolerated population noise structures.Journal of
+Neuroscience39, 9173–9184 (2019).
+[13] Pagkalos, M., Makarov, R. & Poirazi, P. Leveraging dendritic properties to advance machine learning and
+neuro-inspired computing.Current Opinion in Neurobiology85, 102853 (2024).
+[14] Poirazi, P. & Papoutsi, A. Illuminating dendritic function with computational models.Nature Reviews
+Neuroscience21, 303–321 (2020).
+[15] Stuart, G. J. & Spruston, N. Dendritic integration: 60 years of progress.Nature Neuroscience18, 1713–1721
+(2015).
+[16] Francioni, V. & Harnett, M. T. Rethinking single neuron electrical compartmentalization: dendritic
+contributions to network computation in vivo.Neuroscience489, 185–199 (2022).
+[17] Stuyt, G., Godenzini, L. & Palmer, L. M. Local and global dynamics of dendritic activity in the pyramidal
+neuron.Neuroscience489, 176–184 (2022).
+[18] Stingl, M., Draguhn, A. & Both, M. A dendrite is a dendrite is a dendrite? Dendritic signal integration
+beyond the “antenna” model.Pfl¨ ugers Archiv-European Journal of Physiology477, 9–16 (2025).
+[19] Zador, A.et al.Catalyzing next-generation artificial intelligence through NeuroAI.Nature Communications
+14, 1597 (2023).
+[20] Iyer, A.et al.Avoiding catastrophe: Active dendrites enable multi-task learning in dynamic environments.
+Frontiers in Neurorobotics16, 846219 (2022).
+[21] Larkum, M. E. Are dendrites conceptually useful?Neuroscience489, 4–14 (2022).
+[22] Rentzeperis, I., Prandi, D. & Bertalm´ ıo, M. A neural model for V1 that incorporates dendritic nonlinearities
+and back-propagating action potentials.Journal of Neuroscience45(2025).
+[23] Jakubovitz, D. & Giryes, R. European Computer Vision Association (ECVA) (ed.)Improving DNN robustness
+to adversarial attacks using Jacobian regularization. (ed.European Computer Vision Association (ECVA))
+European Conference on Computer Vision, 525–541 (2018).
+[24] Tyukin, I., Higham, D. J., Bastounis, A., Woldegeorgis, E. & Gorban, A. N. The feasibility and inevitability
+of stealth attacks.IMA Journal of Applied Mathematics89, 44–84 (2024).
+22
+
+
+===== PAGE 23 =====
+[25] M¸ adry, A., Makelov, A., Schmidt, L., Tsipras, D. & Vladu, A. International Conference on Learning Represen-
+tations (ed.)Towards deep learning models resistant to adversarial attacks. (ed.International Conference on
+Learning Representations)Proceedings of the International Conference on Learning Representations(2018).
+[26] Pomponi, J., Scardapane, S. & Uncini, A. Pixle: a fast and effective black-box attack based on rearranging
+pixels. International Joint Conference on Neural Networks (IJCNN 2022).
+[27] Hornik, K., Stinchcombe, M., White, H.et al.Multilayer feedforward networks are universal approximators.
+Neural networks2, 359–366 (1989).
+[28] Cybenko, G. Approximation by superpositions of a sigmoidal function.Mathematics of Control, Signals and
+Systems2, 303–314 (1989).
+[29] Feldman, V. & Zhang, C. NIPS Foundation (ed.)What neural networks memorize and why: Discovering the
+long tail via influence estimation. (ed.NIPS Foundation)Advances in Neural Information Processing Systems,
+Vol. 33, 2881–2891 (2020).
+[30] Garg, I., Ravikumar, D. & Roy, K. IMLS (ed.)Memorization through the lens of curvature of loss function
+around samples. (ed.IMLS)International Conference on Machine Learning, Vol. 235, 15083–15101 (2024).
+[31] Bertalm´ ıo, M.et al.Evidence for the intrinsically nonlinear nature of receptive fields in vision.Scientific
+reports10, 16277 (2020).
+[32] Paiton, D. M.et al.Selectivity and robustness of sparse coding networks.Journal of Vision20, 1–28 (2020).
+[33] Rawat, S., Heeger, D. & Martiniani, S. Unconditional stability of a recurrent neural circuit implementing
+divisive normalization.Advances in Neural Information Processing Systems37, 14712–14750 (2024).
+[34] Bai, S., Kolter, J. Z. & Koltun, V. NIPS Foundation (ed.)Deep equilibrium models. (ed.NIPS Foundation)
+Advances in Neural Information Processing Systems(2019).
+[35] Khona, M. & Fiete, I. R. Attractor and integrator networks in the brain.Nature Reviews Neuroscience23,
+744–766 (2022).
+[36] Luna, R., Serrano-Pedraza, I. & Bertalm´ ıo, M. Overcoming the limitations of motion sensor models by
+considering dendritic computations.Scientific reports15, 9213 (2025).
+[37] Vaswani, A.et al.Attention is all you need.Advances in neural information processing systems30(2017).
+[38] Hopfield, J. J. Neurons with graded response have collective computational properties like those of two-state
+neurons.Proceedings of the national academy of sciences81, 3088–3092 (1984).
+[39] Sch¨ olkopf, B.Causality for machine learning, 765–804 (Association for Computing Machinery, New York,
+NY, USA, 2022).
+[40] Pearl, J. & Mackenzie, D.The book of why: the new science of cause and effect(Basic books, 2018).
+[41] Bagul, Y. J. On exponential bounds of hyperbolic cosine.Bulletin of the International Mathematical Virtual
+Institute8, 365–367 (2018).
+[42] Pinkus, A. Approximation theory of the mlp model in neural networks.Acta Numerica8, 143––195 (1999).
+[43] Paszke, A.et al.Pytorch: An imperative style, high-performance deep learning library. Preprint at https:
+//arxiv.org/abs/1912.01703 (2019).
+[44] Geng, Z. & Kolter, J. Z. TorchDEQ: A library for deep equilibrium models (2023). URL https://github.com/
+locuslab/torchdeq.
+[45] Xiao, H., Rasul, K. & Vollgraf, R. Fashion-MNIST: a novel image dataset for benchmarking machine learning
+algorithms. Preprint at https://arxiv.org/abs/1708.07747 (2017).
+[46] Netzer, Y.et al.NIPS Foundation (ed.)Reading digits in natural images with unsupervised feature learning.
+(ed.NIPS Foundation)NIPS Workshop on Deep Learning and Unsupervised Feature Learning, Vol. 2011, 7
+(2011).
+23
+
+
+===== PAGE 24 =====
+[47] Krizhevsky, A. & Hinton, G. Learning multiple layers of features from tiny images. Tech. Rep., University of
+Toronto (2009). URL https://www.cs.toronto.edu/ ∼kriz/learning-features-2009-TR.pdf.
+[48] TorchVision: PyTorch’s computer vision library. https://github.com/pytorch/vision (2016).
+[49] Kim, H. Torchattacks: A PyTorch repository for adversarial attacks. Preprint at https://arxiv.org/abs/2010.
+01950 (2021).
+[50] Biggio, B. & Roli, F. Wild patterns: Ten years after the rise of adversarial machine learning.Pattern
+Recognition84, 317–331 (2018).
+[51] Papernot, N.et al.ACM Special Interest Group on Security, Audit and Control (ed.)Practical black-box
+attacks against machine learning. (ed.ACM Special Interest Group on Security, Audit and Control)Proceed-
+ings of the ACM on Asia Conference on Computer and Communications Security, 506–519 (Association for
+Computing Machinery, New York, NY, USA, 2017).
+24
+
+
+===== PAGE 25 =====
+Supplementary Information
+Creating an IBNN by transferring the weights from an existing SM
+network already trained for the same task
+This section demonstrates that when creating an IBNN to solve a given task, one could avoid the training stage
+by simply transferring the weights from an existing SM network of analogous architecture that has already been
+trained for the same task. The proof is formulated for the case of a binary classification task and one-hidden-layer
+networks, but this should not limit its generality. In addition, we show that the magnitude of the parameterλ
+used in IBNN has an impact on the accuracy achieved by the network.
+Formally, let Ψ be a SM-based binary classifier Ψ(x) =H(s(x)), which performs a binary decision, embodied
+by the Heaviside functionH, based on the sign of a scores:R D →Rassigned to each input samplex∈R N
+through a single hidden layer ofDSM neurons and a FC-based head according to
+s(x) =c T SM(x; M,b)−c 0 =
+DX
+i=1
+ci ϕ(y i(x) )−c 0 ,(S1)
+withc= (c i)D
+i=1 ∈R D andc 0 ∈Rare the weights of the output layer, and where
+yi(x) =m T
+i x−b i ,(S2)
+wherem i ∈R N andb i ∈Rare, respectively, the linear filter and the bias for thei-th unit of the hidden layer (see
+Eq. (1) and Eq. (20)). And let us assume, without any loss of generality, that{c, c 0}has been normalized to make
+ca unit vector, that is,∥c∥ 2= 1.
+We assume that this network has been trained on the setTcomposed of two classesT 0 andT 1 achieving perfect
+accuracy on it, that is,
+Ψ(x(t)) =
+
+1,∀x (t) ∈ T 1
+0,∀x (t) ∈ T 0
+:
+in other words, SM(·; M,b) makes the sets SM(T1; M,b) and SM(T0; M,b) linearly separable, and{c, c 0}separates
+them. Furthermore, we assume that such perfect classifications is achieved through the classifiersof Eq. (S1) by
+a marginM, that is, that
+min
+x(1)∈T1
+n
+s(x(1))
+o
+−max
+x(0)∈T0
+n
+s(x(0))
+o
+≥M .(S3)
+We define another network ˆΨ(x) =H( ˆs(x)), with analogous architecture to Ψ but with IBNN instead of SM
+neurons in its hidden layer, and with the peculiarity that the IBNN neurons use the same exact{M,b}of the
+respective SM neurons in Eqs. (S1)-(S2) but whose scoring hyperplane{ ˆc, ˆc0}is allowed to differ, and thus
+ˆs(x) = ˆcT IBNN(x; M,b, λ)− ˆc0 =
+DX
+i=1
+ˆci ϕ(z i(x) )− ˆc0 ,(S4)
+where
+zi(x) =m T
+i x−b i −λ
+DX
+k=1
+wik σ(zk(x)−z i(x)) .(S5)
+We will show that the training error achievable by the IBNN-based classifier ˆΨ is below a bound that depends
+linearly on the magnitude|λ|and which could be made, consequently, arbitrarily small. We will do so by studying
+the case of ˆc=cand ˆc0 =c 0, that is, a scoring hyperplane for ˆΨ identical to that of Ψ, as a suboptimal
+instance of{ ˆc, ˆc0}. In the remaining of the section we will use, for convenience, the shorter notation IBNN(x) =
+IBNN(x; M,b, λ) and SM(x) = SM(x; M,b) where the parameters of the layer are left implied.
+First, a bound on the maximum distance between the images of the maps SM(·) and IBNN(·) for the same
+data pointxcan be established. The difference can be written as
+IBNN(x)−SM(x) = (Φ◦F◦A )(x)− (Φ◦A )(x) = (Φ◦F )(A(x))−Φ(A(x)),(S6)
+where the dependence F = F(·;λ) has also left implied. From that form, for any Φ = (ϕ) D
+i=1 contractive like in the
+case ofϕ= ReLU, we have that, for anyy= A(x),
+25
+
+
+===== PAGE 26 =====
+∥(Φ◦F )(y)−Φ(y)∥ 2
+2 ≤ ∥F(y)−y∥ 2
+2
+=∥ −λB (F(y)) ∥2
+2 ≤ |λ| 2 ∥B (F(y)) ∥2
+2
+≤ |λ| 2 D ,
+(S7)
+wherein the second line is derived from the very definition of the fixed-point function F (see Eq. (17)) when a
+unique solution exists, since F(y) =y−λB (F(y)), and wherein the last inequality derives straightforwardly from
+the definition of B = (B i)D
+i=1 (see Eq. (16)) for a sigmoidal|σ|≤1 and positive and normalizedw ik as
+|Bi(z)|=
+
+DX
+k=1
+wikσ(zk −z i)
+ ≤
+DX
+k=1
+|wik| |σ(zk −z i)| ≤
+DX
+k=1
+|wik| ≤1.(S8)
+Therefore, since by virtue of Eqs. (S6)-(S7)
+∥IBNN(x)−SM(x)∥ 2 ≤ |λ|
+√
+D ,(S9)
+we can write, for anyx∈R N,
+IBNN(x) = SM(x) +α(x)q(x) (S10)
+for certainα(x)∈Randq(x)∈R D such that 0≤α(x)≤ |λ|
+√
+Dand∥q(x)∥ 2= 1. Using this fact, and for an
+identical scoring hyperplane to that of Ψ, that is, ˆc=cand ˆc0 =c 0), we have,∀x (1) ∈ T 1 and∀x (0) ∈ T 0,
+ˆs(x(1))− ˆs(x(0))
+=
+
+cT IBNN(x(1))−c 0
+
+−
+
+cT IBNN(x(0))−c 0
+
+=
+
+cT
+
+SM(x(1)) +α(x (1))q(x (1))
+
+−c 0
+
+−
+
+cT
+
+SM(x(0)) +α(x (0))q(x (0))
+
+−c 0
+
+=
+
+cT SM(x(1))−c 0
+
+−
+
+cT SM(x(0))−c 0
+
++c T
+
+α(x(1))q(x (1))−α(x (0))q(x (0))
+
+≥M−2|λ|
+√
+D ,
+(S11)
+where the last inequality results from the assumption of Eq. (S3) for a marginMin the SM-based classifier and
+from the worst case alignment between the unit vectorscandq(x (i)).
+26
