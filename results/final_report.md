@@ -71,16 +71,18 @@ Smoke checks used:
 - Local paper audit against `papers/2405.05097v8.pdf`,
   `papers/2404.19756v5.pdf`, and `papers/2605.30370v2.pdf`.
 
-For real experiments, place `data/tiny_shakespeare.txt` or set `data_path` in a
-config and increase `max_steps`.
+For real experiments, benchmark configs now fetch `Trelis/tiny-shakespeare`
+from Hugging Face through the Dataset Viewer API and cache the resulting text in
+`data/hf_cache/`. You can override `hf_dataset`, `hf_split`, and `hf_max_rows`
+from the command line, or set `data_path` for a local file.
 
-Important correction from a later full baseline run: without
-`data/tiny_shakespeare.txt`, the old benchmark config silently used the built-in
-fallback excerpt. That run memorized the tiny train fragment immediately
-(`loss` near zero) while validation loss climbed above `8`, so it is not a valid
-baseline. Benchmark configs now set `allow_fallback_dataset: false`, and the
-trainer logs dataset source, character count, and train/validation window
-counts.
+Important correction from a later full baseline run: the old benchmark config
+silently used the built-in fallback excerpt when `data/tiny_shakespeare.txt` was
+missing. That run memorized the tiny train fragment immediately (`loss` near
+zero) while validation loss climbed above `8`, so it is not a valid baseline.
+Benchmark configs now use Hugging Face data by default, and the trainer logs
+dataset source, character count, row count, cache path, and train/validation
+window counts.
 
 ## 5. Smoke Results
 

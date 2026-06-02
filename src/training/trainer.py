@@ -223,6 +223,8 @@ def train(config: dict[str, Any]) -> dict[str, Any]:
         "dataset_source": dataset_info.source,
         "dataset_chars": dataset_info.chars,
         "dataset_fallback": dataset_info.fallback,
+        "dataset_rows": dataset_info.rows,
+        "dataset_cache_path": dataset_info.cache_path,
         "train_windows": len(train_data),
         "val_windows": len(val_data),
     }

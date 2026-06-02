@@ -1,6 +1,9 @@
 model_type: hcr_moment
-dataset: tiny_shakespeare
-allow_fallback_dataset: false
+dataset: huggingface
+hf_dataset: Trelis/tiny-shakespeare
+hf_config: default
+hf_split: train
+hf_max_rows: 1000
 output_dir: runs/hcr_moment
 context_length: 128
 batch_size: 32

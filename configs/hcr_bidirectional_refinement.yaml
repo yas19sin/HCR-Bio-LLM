@@ -1,6 +1,9 @@
 model_type: hcr_bidirectional_refinement
-dataset: tiny_shakespeare
-allow_fallback_dataset: false
+dataset: huggingface
+hf_dataset: Trelis/tiny-shakespeare
+hf_config: default
+hf_split: train
+hf_max_rows: 1000
 output_dir: runs/hcr_bidirectional_refinement
 task: denoising
 context_length: 128

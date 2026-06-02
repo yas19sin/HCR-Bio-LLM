@@ -82,13 +82,8 @@ Run the source-grounded HCR faithfulness check:
 python hcr_faithfulness_check.py
 ```
 
-For benchmark-style runs, first provide real text data:
-
-```bash
-python train.py --config configs/transformer_baseline.yaml --set data_path=data/tiny_shakespeare.txt
-```
-
-Run the baseline, assuming `data/tiny_shakespeare.txt` exists:
+Run the baseline. Benchmark configs automatically fetch and cache
+`Trelis/tiny-shakespeare` from Hugging Face:
 
 ```bash
 python train.py --config configs/transformer_baseline.yaml
@@ -105,6 +100,12 @@ python train.py --config configs/hcr_bidirectional_refinement.yaml
 ```
 
 If your dataset is elsewhere, pass it explicitly:
+
+```bash
+python train.py --config configs/hcr_blockwise_joint.yaml --set hf_dataset=namespace/dataset --set hf_split=train
+```
+
+Local files still work when you want them:
 
 ```bash
 python train.py --config configs/hcr_blockwise_joint.yaml --set data_path=path/to/text.txt
@@ -128,27 +129,40 @@ Summarize distribution channels:
 python analyze_uncertainty.py --checkpoint runs/hcr_moment/best.pt
 ```
 
-For quick debugging of a benchmark config without real data, opt into the
-fallback explicitly and treat the run as non-comparable:
+For quick debugging without network, use the smoke configs. To force the tiny
+fallback through a benchmark config, override the dataset explicitly and treat
+the run as non-comparable:
 
 ```bash
-python train.py --config configs/transformer_baseline.yaml --set allow_fallback_dataset=true
+python train.py --config configs/transformer_baseline.yaml --set dataset=tiny_shakespeare --set allow_fallback_dataset=true
 ```
 
 ## Data
 
-By default, benchmark configs use `dataset: tiny_shakespeare` and require
-`data/tiny_shakespeare.txt`. The tiny built-in public-domain Shakespeare excerpt
-is allowed only for smoke/debug configs, because it is too small for benchmark
-runs and will be memorized quickly.
+By default, benchmark configs use Hugging Face:
 
-For a real run, create:
-
-```text
-data/tiny_shakespeare.txt
+```yaml
+dataset: huggingface
+hf_dataset: Trelis/tiny-shakespeare
+hf_config: default
+hf_split: train
+hf_max_rows: 1000
 ```
 
-or set:
+The loader uses the Hugging Face Dataset Viewer API, concatenates the text
+column, and caches it under:
+
+```text
+data/hf_cache/
+```
+
+Useful overrides:
+
+```bash
+python train.py --config configs/transformer_baseline.yaml --set hf_dataset=roneneldan/TinyStories --set hf_split=train --set hf_max_rows=5000
+```
+
+Local files still work:
 
 ```yaml
 data_path: path/to/text.txt
