@@ -29,9 +29,11 @@ were worse (`hcr_density=1.5337`, `hcr_moment=1.5472`,
 barely beat the baseline at `1.4851`, but it is a KAN/RBF-style bridge rather
 than HCR joint-density evidence and was much slower.
 
-The project is now focused on making the faithful `hcr_blockwise_joint` path
-work as an HCR-style causal NTP model instead of continuing broad comparisons
-between partial approximations.
+The first focused faithful-HCR run also underperformed: `hcr_blockwise_joint`
+with the stable faithful config reached loss `1.5956`, worse than the fair
+baseline and worse than the earlier fair blockwise run. That means the current
+paper-direct implementation still needs debugging and architectural fidelity
+work before it can support an HCR causal-LM claim.
 
 ## Implemented Models
 
@@ -143,6 +145,12 @@ denominators, coefficient magnitude, and normalized conditional variance.
 Suite runs mirror compact training progress to the notebook by default while
 still writing complete logs to `suite_logs/train.log`. Use `--progress off` for
 quiet runs or `--progress all` to also mirror eval/uncertainty/sample output.
+
+The first 10k faithful-HCR Kaggle run reached loss `1.5956`, accuracy `0.5300`,
+perplexity `4.9312`, ECE `0.0482`, Brier `0.4553`, corruption ratio `1.2561`,
+and throughput around `17.4k tok/s`. Treat this as a negative result for the
+current faithful causal implementation, not as evidence against the paper in
+general.
 
 The denoising refinement model is a separate, optional reconstruction task. It
 is intentionally outside the NTP benchmark:

@@ -171,6 +171,29 @@ lost on first-pass language-modeling quality, although `hcr_moment` and
 `hcr_density` had better ECE than the baseline. That calibration signal is
 interesting but not enough to claim better generation or better NTP.
 
+## 5.3 Focused Faithful-HCR NTP Run
+
+After the fair 4M suite, the focused paper-direct run trained only
+`hcr_blockwise_joint` with `configs/faithful_hcr/ntp_stable.yaml`:
+
+- suite: `faithful-hcr`
+- steps: `10000`
+- seed: `1337`
+- eval batches: `20`
+- output directory: `runs/benchmark_suites/faithful_hcr_ntp_10k`
+
+| Model | Note | Params | Loss | Acc | PPL | ECE | Brier | Corrupt x | tok/s |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| HCR blockwise joint | faithful_hcr_ntp_stable | 4,033,808 | 1.5956 | 0.5300 | 4.9312 | 0.0482 | 0.4553 | 1.2561 | 17,400 |
+
+This is a negative result for the current faithful causal implementation. The
+stability-regularized faithful config was worse than the fair Transformer
+baseline (`1.4893`) and worse than the earlier fair `hcr_blockwise_joint` run
+(`1.5605`). The lower corruption ratio is not enough to offset the main NTP
+loss/perplexity regression. The right conclusion is that this implementation
+still needs fidelity and optimization work before it can test the paper's HCR
+claim inside a causal LM.
+
 The paper-direct HCR faithfulness check passed before the density-state carry
 extension via `hcr_faithfulness_check.py`:
 
@@ -267,8 +290,9 @@ mixed-moment mechanics now live in `src/model/hcr_moments.py`.
 
 The parameter-matched causal NTP suite has now run, and the HCR-specific causal
 variants did not beat the Transformer baseline on validation loss or
-perplexity. The next step is no longer more same-shape benchmarking; it is to
-fix the HCR translation into a causal Transformer.
+perplexity. The focused faithful-HCR run also underperformed. The next step is
+no longer more same-shape benchmarking; it is to fix the HCR translation into a
+causal Transformer.
 
 The most promising engineering direction is:
 
@@ -294,7 +318,9 @@ state, while adding auxiliary losses that penalize:
 - exploding non-normalizer conditional coefficients,
 - normalized conditional variance above the `[0, 1]` variable bound.
 
-The next focused run is:
+The first focused 10k run of that config reached loss `1.5956`, which is worse
+than the fair Transformer baseline and the earlier fair blockwise HCR result.
+The command remains useful as the focused regression target:
 
 ```bash
 python run_benchmark_suite.py --suite faithful-hcr --steps 10000 --run-name faithful_hcr_ntp_10k
