@@ -75,6 +75,91 @@ def get_task(config: dict[str, Any]) -> str:
     return "causal"
 
 
+COMPACT_STDOUT_KEYS = {
+    "start": (
+        "event",
+        "model_type",
+        "params",
+        "device",
+        "task",
+        "dataset_source",
+        "dataset_chars",
+        "dataset_fallback",
+        "train_windows",
+        "val_windows",
+    ),
+    "train": (
+        "event",
+        "step",
+        "loss",
+        "tokens_per_sec",
+        "state_mu_std",
+        "state_log_var_std",
+        "state_variance_mean",
+        "state_basis_entropy",
+        "state_corr_std",
+        "state_hcr_conditional_mean_std",
+        "state_hcr_denominator_std",
+    ),
+    "eval": (
+        "event",
+        "step",
+        "val_loss",
+        "val_accuracy",
+        "val_ece",
+        "val_brier",
+        "val_perplexity",
+        "val_log_var_std",
+        "val_variance_mean",
+        "val_basis_entropy",
+        "val_corr_std",
+        "val_hcr_conditional_mean_std",
+        "val_hcr_denominator_std",
+    ),
+    "final": (
+        "event",
+        "best_val_loss",
+        "output_dir",
+        "params",
+    ),
+}
+
+
+def _parse_stdout_events(value: Any) -> set[str] | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        lower = value.strip().lower()
+        if lower in {"all", "full", "*"}:
+            return None
+        if lower in {"none", "quiet", "off"}:
+            return set()
+        return {item.strip() for item in lower.split(",") if item.strip()}
+    if isinstance(value, (list, tuple, set)):
+        return {str(item).strip().lower() for item in value if str(item).strip()}
+    return {str(value).strip().lower()}
+
+
+def _compact_metrics(metrics: dict[str, Any]) -> dict[str, Any]:
+    event = str(metrics.get("event", ""))
+    keys = COMPACT_STDOUT_KEYS.get(event)
+    if keys is None:
+        return metrics
+    return {key: metrics[key] for key in keys if key in metrics}
+
+
+def emit_metrics(metrics: dict[str, Any], config: dict[str, Any]) -> None:
+    mode = str(config.get("stdout", "full")).strip().lower()
+    if mode in {"quiet", "none", "off"}:
+        return
+    allowed_events = _parse_stdout_events(config.get("stdout_events"))
+    event = str(metrics.get("event", "")).lower()
+    if allowed_events is not None and event not in allowed_events:
+        return
+    payload = _compact_metrics(metrics) if mode == "compact" else metrics
+    print(format_metrics(payload))
+
+
 def checkpoint_payload(
     model: torch.nn.Module,
     optimizer: torch.optim.Optimizer | None,
@@ -228,7 +313,7 @@ def train(config: dict[str, Any]) -> dict[str, Any]:
         "train_windows": len(train_data),
         "val_windows": len(val_data),
     }
-    print(format_metrics(start_metrics))
+    emit_metrics(start_metrics, config)
     logger.write(start_metrics)
 
     for step in range(1, max_steps + 1):
@@ -284,14 +369,14 @@ def train(config: dict[str, Any]) -> dict[str, Any]:
                 "tokens_per_sec": step * batch_size * context_length / elapsed,
             }
             metrics.update({f"state_{k}": v for k, v in summarize_state(state).items()})
-            print(format_metrics(metrics))
+            emit_metrics(metrics, config)
             logger.write(metrics)
 
         if step == 1 or step % eval_interval == 0 or step == max_steps:
             val_metrics = estimate_metrics(model, val_data, config, device, eval_batches)
             prefixed = {f"val_{k}": v for k, v in val_metrics.items()}
             record = {"event": "eval", "step": step, **prefixed}
-            print(format_metrics(record))
+            emit_metrics(record, config)
             logger.write(record)
             if val_metrics["loss"] < best_val:
                 best_val = val_metrics["loss"]
@@ -331,5 +416,5 @@ def train(config: dict[str, Any]) -> dict[str, Any]:
         except Exception as exc:  # pragma: no cover
             final["sample_error"] = str(exc)
     logger.write({"event": "final", **final})
-    print(format_metrics({"event": "final", **{k: v for k, v in final.items() if k != "sample"}}))
+    emit_metrics({"event": "final", **{k: v for k, v in final.items() if k != "sample"}}, config)
     return final

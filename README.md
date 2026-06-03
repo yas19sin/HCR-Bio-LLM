@@ -99,6 +99,54 @@ python train.py --config configs/hcr_blockwise_joint.yaml
 python train.py --config configs/hcr_bidirectional_refinement.yaml
 ```
 
+Run a matched causal benchmark suite from one command. This is the recommended
+Kaggle workflow because it captures raw logs to files and prints only a compact
+status/result stream. The `fair-causal` suite uses `configs/fair_4m/` and keeps
+all causal models near a 4M trainable-parameter budget:
+
+```bash
+python run_benchmark_suite.py --suite fair-causal --steps 10000
+```
+
+The fair causal suite runs the Transformer baseline, HCR-KAN mean, HCR moment,
+HCR density, HCR joint-pairwise, and HCR blockwise-joint with matched dataset,
+seed, context length, batch size, optimizer settings, step count, eval interval,
+eval batch count, and approximate parameter budget. It is still not compute-
+matched because the architectures do different work per token, so the generated
+report shows throughput as well as parameter counts.
+
+The denoising refinement model is a separate task:
+
+```bash
+python run_benchmark_suite.py --suite fair-denoising --steps 10000
+```
+
+The older `causal`, `denoising`, and `all` suites use each model's native config
+sizes and are useful for continuity, but not for parameter-matched claims.
+
+Suite outputs live under `runs/benchmark_suites/<suite_name>/`:
+
+- `summary.md`: compact comparison table and interpretation checklist.
+- `summary.json`: machine-readable result summary.
+- `<model>/metrics.jsonl`: full training metrics.
+- `<model>/suite_logs/train.log`: captured stdout/stderr from training.
+- `<model>/suite_logs/eval.json`: final evaluation output.
+- `<model>/suite_logs/uncertainty.json`: distribution-channel summary.
+- `<model>/suite_logs/sample.txt`: generated sample for causal models.
+
+For a less noisy manual training cell, use compact stdout:
+
+```bash
+python train.py --config configs/hcr_density.yaml --set stdout=compact --set stdout_events=start,eval,final --set log_interval=250
+```
+
+Check exact trainable parameter counts for the fair configs without loading
+data:
+
+```bash
+python count_model_params.py configs/fair_4m
+```
+
 If your dataset is elsewhere, pass it explicitly:
 
 ```bash
