@@ -7,9 +7,10 @@ Trainable research prototype for testing joint-distribution-inspired neurons in
 small language models.
 
 The project follows `hcr_transformer_intern_project.md`: start with an
-undeniable tiny Transformer baseline, then compare HCR-inspired variants that
-carry expected values, hidden moments, density coefficients, pairwise features,
-and bidirectional refinement dynamics.
+undeniable tiny Transformer baseline, then compare causal next-token prediction
+variants that carry expected values, hidden moments, density coefficients, and
+pairwise features. Bidirectional refinement is a side experiment, not part of
+the main NTP benchmark.
 
 The implementation is grounded against the local PDFs in `papers/`. See
 [docs/paper_alignment.md](docs/paper_alignment.md) for the exact mapping between
@@ -38,9 +39,9 @@ are summarized in [docs/upstream_grounding.md](docs/upstream_grounding.md).
   density coefficient state carried between blockwise HCR FFNs, and exposed
   reverse conditioning on the same coefficients. Attention still operates on
   point hidden values rather than full density states.
-- `hcr_bidirectional_refinement`: non-causal denoising model with iterative
-  refinement and per-step loss support. This is a refinement bridge, not yet
-  reverse conditioning through an explicit HCR joint-density tensor.
+- `hcr_bidirectional_refinement`: non-causal denoising side branch with
+  iterative refinement and per-step loss support. It is not a next-token
+  prediction model and should not be used for causal generation claims.
 
 For a literal small-block HCR primitive, see
 [src/model/hcr_moments.py](src/model/hcr_moments.py). It implements shifted
@@ -96,7 +97,6 @@ python train.py --config configs/hcr_moment.yaml
 python train.py --config configs/hcr_density.yaml
 python train.py --config configs/hcr_joint_pairwise.yaml
 python train.py --config configs/hcr_blockwise_joint.yaml
-python train.py --config configs/hcr_bidirectional_refinement.yaml
 ```
 
 Run a matched causal benchmark suite from one command. This is the recommended
@@ -115,14 +115,17 @@ eval batch count, and approximate parameter budget. It is still not compute-
 matched because the architectures do different work per token, so the generated
 report shows throughput as well as parameter counts.
 
-The denoising refinement model is a separate task:
+The denoising refinement model is a separate, optional reconstruction task. It
+is intentionally outside the NTP benchmark:
 
 ```bash
 python run_benchmark_suite.py --suite fair-denoising --steps 10000
 ```
 
-The older `causal`, `denoising`, and `all` suites use each model's native config
-sizes and are useful for continuity, but not for parameter-matched claims.
+The older `causal` and `all` suites use each causal model's native config sizes
+and are useful for continuity, but not for parameter-matched claims. The
+`research-all` and `fair-research-all` suites are the only suite aliases that
+include the denoising side branch.
 
 Suite outputs live under `runs/benchmark_suites/<suite_name>/`:
 
@@ -164,6 +167,11 @@ Sample from a causal checkpoint:
 ```bash
 python sample.py --checkpoint runs/transformer_baseline/best.pt --prompt "First "
 ```
+
+`sample.py` is intentionally restricted to causal LM checkpoints. Denoising
+checkpoints such as `hcr_bidirectional_refinement` can have strong masked
+reconstruction loss while producing nonsense under autoregressive sampling,
+because they were not trained for next-token generation.
 
 Evaluate a checkpoint:
 
@@ -242,16 +250,17 @@ available state statistics such as `log_var_std`, `variance_mean`,
 
 1. Train `transformer_baseline` and confirm loss, sampling, tokens/sec, and
    checkpointing.
-2. Train `hcr_kan_mean` with approximately matched dimensions and compare loss
-   and throughput.
+2. Train `hcr_kan_mean` with approximately matched dimensions and compare NTP
+   loss and throughput.
 3. Train `hcr_moment`; inspect variance statistics with
    `analyze_uncertainty.py`.
 4. Train `hcr_density` and inspect basis entropy.
 5. Train `hcr_joint_pairwise` and inspect correlation statistics.
 6. Train `hcr_blockwise_joint` as the first explicit blockwise HCR
    expected-value model.
-7. Train `hcr_bidirectional_refinement` on denoising and compare loss per
-   refinement step by enabling `return_steps: true`.
+
+Keep `hcr_bidirectional_refinement` out of this sequence unless you explicitly
+want a masked reconstruction side experiment.
 
 ## Report Template
 
@@ -263,10 +272,10 @@ Use `results/final_report.md` for the research write-up:
 3. Implemented models
 4. Training setup
 5. Language modeling results
-6. Denoising / masked reconstruction results
+6. Optional denoising / masked reconstruction side results
 7. Calibration and uncertainty results
 8. Corruption robustness
-9. Refinement dynamics
+9. Causal HCR state dynamics
 10. Variance, basis, and correlation visualizations
 11. What worked
 12. What failed

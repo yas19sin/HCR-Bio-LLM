@@ -12,10 +12,12 @@ intended state statistics.
 ## 1. Motivation
 
 The project tests whether HCRNN-style joint-distribution neurons can become a
-practical language-model primitive rather than only an FFN replacement. The
-implementation keeps a Transformer baseline and adds progressively richer HCR
-state channels: mean, variance, density coefficients, pairwise features, and
-bidirectional refinement.
+practical next-token prediction primitive rather than only an FFN replacement.
+The implementation keeps a Transformer baseline and adds progressively richer
+causal HCR state channels: mean, variance, density coefficients, pairwise
+features, and explicit blockwise joint-density propagation. Bidirectional
+refinement is recorded as a side experiment, not as evidence for causal LM
+quality.
 
 ## 2. HCRNN/KAN/Cortical-Neuron Inspiration
 
@@ -55,8 +57,8 @@ reconstruction is not yet a language-model evaluation path.
   dense HCR coefficient tensor.
 - `hcr_blockwise_joint`: causal LM with explicit blockwise HCR coefficient
   tensors and conditional expected-value propagation.
-- `hcr_bidirectional_refinement`: non-causal masked denoising model with
-  iterative refinement.
+- `hcr_bidirectional_refinement`: non-causal masked denoising side branch with
+  iterative refinement. It is not a next-token prediction model.
 
 ## 4. Training Setup
 
@@ -99,6 +101,45 @@ window counts.
 The five-step HCR moment run also passed checkpoint load/eval, corruption
 evaluation, uncertainty analysis, and text sampling.
 
+## 5.1 Kaggle Native-Config Results From Previous Run
+
+The first Kaggle GPU run used the native benchmark configs, not the later
+`fair_4m` parameter-matched configs. These results are useful as a progress
+marker, but only causal models should be compared against each other. The
+bidirectional refinement result is a separate masked reconstruction side task,
+not an NTP result.
+
+For `hcr_bidirectional_refinement` on `Trelis/tiny-shakespeare`, checkpoint
+step `10000`:
+
+| Metric | Value |
+|---|---:|
+| Task | denoising / masked reconstruction |
+| Params | 3,284,656 |
+| Train-time best val loss | 1.2187 |
+| Final eval loss | 1.1949 |
+| Accuracy | 0.6294 |
+| Perplexity | 3.3034 |
+| ECE | 0.0565 |
+| Brier | 0.3557 |
+| Basis entropy | 0.2444 |
+| `log_var_mean` | 0.1711 |
+| `log_var_std` | 1.4535 |
+| `mu_std` | 0.7782 |
+| `variance_mean` | 2.9083 |
+
+The follow-up uncertainty summary for the same checkpoint reported
+`basis_entropy=0.2418`, `log_var_mean=0.1545`, `log_var_std=1.4213`,
+`mu_std=0.7782`, and `variance_mean=2.7664`.
+
+The generated `sample.py` text from this checkpoint was broken and heavily
+uppercase/repetitive. That is expected: `sample.py` performs autoregressive
+next-token generation, while `hcr_bidirectional_refinement` was trained as a
+non-causal denoising model that reconstructs masked positions using surrounding
+context. Its good validation loss means it is good at masked reconstruction,
+not at causal text generation. This result should not be compared directly to
+causal LM validation losses.
+
 The paper-direct HCR faithfulness check passed before the density-state carry
 extension via `hcr_faithfulness_check.py`:
 
@@ -116,13 +157,14 @@ shapes in a two-layer `hcr_blockwise_joint` LM. That latest runtime check is
 pending because the local Python launcher was blocked by the environment usage
 limit after the implementation change.
 
-## 6. Denoising / Masked Reconstruction
+## 6. Optional Denoising / Masked Reconstruction Side Branch
 
 The refinement model trains in `task: denoising` mode. Its input batch randomly
 masks characters, supervises only masked positions, initializes masked-token
 variance higher than observed-token variance, and uses non-causal HCR-inspired
-density bridge blocks for iterative refinement. This is not yet reverse
-conditioning through an explicit HCR joint-density tensor.
+density bridge blocks for iterative refinement. This is not a next-token
+prediction path. It should stay out of the main HCR-vs-Transformer causal LM
+claim unless a causal refinement variant is implemented.
 
 ## 7. Calibration and Uncertainty
 
@@ -149,11 +191,12 @@ moment smoke checkpoint:
 This is a runtime-path check only; real robustness conclusions require longer
 matched runs.
 
-## 9. Refinement Dynamics
+## 9. State Dynamics
 
-`hcr_bidirectional_refinement` supports `return_steps: true`, and the model
-internally computes per-refinement-step losses when requested. The trainer and
-metrics path exercise this mode.
+The causal HCR models expose moment, density, pairwise, and blockwise
+conditional-state statistics through the same metrics path. The denoising side
+branch also supports `return_steps: true`, but that only measures masked
+reconstruction refinement, not NTP generation.
 
 ## 10. Visualizations
 
@@ -165,7 +208,7 @@ plots:
 - variance/error correlation
 - calibration reliability diagrams
 - clean vs corrupted loss
-- refinement step vs loss
+- causal state statistics vs loss
 - density-basis entropy over training
 - pairwise/correlation feature statistics
 
@@ -173,9 +216,10 @@ plots:
 
 - All model families build and complete at least one train/eval/checkpoint
   cycle.
-- HCR moment, density, joint, and refinement models expose inspectable
-  distributional state statistics.
-- The same training interface covers causal LM and denoising refinement.
+- HCR moment, density, joint, and blockwise causal models expose inspectable
+  distributional state statistics for next-token prediction.
+- The same training interface can run the optional denoising side branch, but
+  that branch is excluded from causal LM comparisons.
 - Checkpoint loading, evaluation, corruption metrics, uncertainty summaries, and
   sampling were verified.
 - The repo now has a paper-direct HCR mixed-moment utility separate from the
@@ -190,15 +234,19 @@ mixed-moment mechanics now live in `src/model/hcr_moments.py`.
 
 ## 13. Most Promising Next Direction
 
-Run matched longer experiments for:
+Run the parameter-matched causal NTP suite:
 
 1. `transformer_baseline`
-2. `hcr_moment`
-3. `hcr_bidirectional_refinement`
+2. `hcr_kan_mean`
+3. `hcr_moment`
+4. `hcr_density`
+5. `hcr_joint_pairwise`
+6. `hcr_blockwise_joint`
 
-Then compare validation loss, ECE, corruption degradation, and variance/error
-correlation. This is the shortest path to seeing whether the distributional
-channels carry useful signal beyond being trainable.
+Then compare causal validation loss, perplexity, ECE, Brier score, corruption
+degradation, throughput, and variance/error correlation. This is the shortest
+path to seeing whether the HCR distributional channels carry useful NTP signal
+beyond extra parameters.
 
 In parallel, use `HCRLocalJointDensity` and `hcr_synthetic_demo.py` on synthetic
 normalized variables to validate paper-faithful conditional propagation, then
@@ -206,11 +254,12 @@ compare that behavior with `hcr_blockwise_joint` inside the language model.
 
 The upstream review changes the priority order:
 
-1. Add reverse reconstruction for the explicit HCR path.
-2. Propagate density-vector state through attention/projection operations, not
+1. Propagate density-vector state through attention/projection operations, not
    just the HCR FFN chain.
-3. Add learned/empirical CDF normalization or another measured normalization
+2. Add learned/empirical CDF normalization or another measured normalization
    path for hidden variables.
+3. Stabilize the explicit blockwise HCR denominator/coefficient path for causal
+   NTP.
 4. Add a separate KAN baseline, preferably efficient spline KAN or FastKAN-like
    RBF plus LayerNorm and base update.
 5. Keep KAN/GPT/KAT results as baselines, not as proof of HCR behavior.
@@ -221,5 +270,5 @@ The upstream review changes the priority order:
   training?
 - Do density coefficients avoid collapse without stronger auxiliary objectives?
 - Do pairwise channels help on synthetic correlation tasks before language data?
-- Does refinement improve masked reconstruction over multiple steps?
+- Can explicit blockwise HCR coefficients remain stable during causal NTP?
 - Can local losses improve stability or sample efficiency?

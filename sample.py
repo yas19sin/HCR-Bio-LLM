@@ -16,10 +16,24 @@ def main() -> None:
     parser.add_argument("--temperature", type=float, default=0.9)
     parser.add_argument("--top-k", type=int, default=50)
     parser.add_argument("--device", default="auto")
+    parser.add_argument(
+        "--allow-noncausal",
+        action="store_true",
+        help="Force autoregressive sampling from a non-causal checkpoint for debugging only.",
+    )
     args = parser.parse_args()
 
     device = resolve_device({"device": args.device})
-    model, tokenizer, _, meta = load_checkpoint(args.checkpoint, device)
+    model, tokenizer, config, meta = load_checkpoint(args.checkpoint, device)
+    task = str(config.get("task", "causal"))
+    model_type = str(config.get("model_type", ""))
+    if not args.allow_noncausal and (task != "causal" or model_type == "hcr_bidirectional_refinement"):
+        raise SystemExit(
+            "sample.py only supports causal language-model checkpoints. "
+            f"This checkpoint is model_type={model_type!r}, task={task!r}; use eval.py "
+            "or analyze_uncertainty.py for denoising checkpoints. Pass --allow-noncausal "
+            "only if you intentionally want invalid debug text."
+        )
     with torch.no_grad():
         text = generate_text(
             model,
@@ -36,4 +50,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

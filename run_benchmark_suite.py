@@ -61,10 +61,12 @@ SUITES = {
     "causal-core": CORE_CAUSAL_MODELS,
     "causal": [*CORE_CAUSAL_MODELS, BLOCKWISE_MODEL],
     "denoising": [REFINEMENT_MODEL],
-    "all": [*CORE_CAUSAL_MODELS, BLOCKWISE_MODEL, REFINEMENT_MODEL],
+    "all": [*CORE_CAUSAL_MODELS, BLOCKWISE_MODEL],
+    "research-all": [*CORE_CAUSAL_MODELS, BLOCKWISE_MODEL, REFINEMENT_MODEL],
     "fair-causal": FAIR_CAUSAL_MODELS,
     "fair-denoising": [FAIR_REFINEMENT_MODEL],
-    "fair-all": [*FAIR_CAUSAL_MODELS, FAIR_REFINEMENT_MODEL],
+    "fair-all": FAIR_CAUSAL_MODELS,
+    "fair-research-all": [*FAIR_CAUSAL_MODELS, FAIR_REFINEMENT_MODEL],
 }
 
 
