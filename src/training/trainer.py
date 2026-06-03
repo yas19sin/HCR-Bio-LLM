@@ -23,7 +23,13 @@ from ..model import build_model
 from ..tokenizer import CharTokenizer
 from .local_losses import NeighborPredictionLoss, moment_smoothness_loss
 from .logging import JSONLLogger, format_metrics
-from .losses import basis_entropy_loss, variance_noncollapse_loss
+from .losses import (
+    basis_entropy_loss,
+    hcr_conditional_coefficient_loss,
+    hcr_denominator_stability_loss,
+    hcr_variance_bound_loss,
+    variance_noncollapse_loss,
+)
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
@@ -100,6 +106,9 @@ COMPACT_STDOUT_KEYS = {
         "state_corr_std",
         "state_hcr_conditional_mean_std",
         "state_hcr_denominator_std",
+        "aux_hcr_denominator_loss",
+        "aux_hcr_coefficient_loss",
+        "aux_hcr_variance_bound_loss",
     ),
     "eval": (
         "event",
@@ -157,7 +166,7 @@ def emit_metrics(metrics: dict[str, Any], config: dict[str, Any]) -> None:
     if allowed_events is not None and event not in allowed_events:
         return
     payload = _compact_metrics(metrics) if mode == "compact" else metrics
-    print(format_metrics(payload))
+    print(format_metrics(payload), flush=True)
 
 
 def checkpoint_payload(
@@ -333,6 +342,7 @@ def train(config: dict[str, Any]) -> dict[str, Any]:
         )
         loss = out["loss"]
         state = out.get("state", {})
+        aux_metrics: dict[str, float] = {}
         if isinstance(state, dict):
             if state.get("log_var") is not None:
                 loss = loss + variance_noncollapse_loss(
@@ -350,6 +360,30 @@ def train(config: dict[str, Any]) -> dict[str, Any]:
                 )
             if local_loss_module is not None and state.get("mu") is not None:
                 loss = loss + local_weight * local_loss_module(state["mu"])
+            hcr_denominator_loss = hcr_denominator_stability_loss(
+                state.get("hcr_denominator"),
+                min_abs=float(config.get("hcr_denominator_min_abs", 0.05)),
+                negative_weight=float(config.get("hcr_denominator_negative_weight", 1.0)),
+                weight=float(config.get("hcr_denominator_stability_weight", 0.0)),
+            )
+            hcr_coefficient_loss = hcr_conditional_coefficient_loss(
+                state.get("hcr_conditional_coefficients"),
+                max_rms=float(config.get("hcr_coefficient_max_rms", 4.0)),
+                weight=float(config.get("hcr_coefficient_rms_weight", 0.0)),
+            )
+            hcr_variance_loss = hcr_variance_bound_loss(
+                state.get("hcr_conditional_variance"),
+                max_variance=float(config.get("hcr_variance_max", 0.25)),
+                weight=float(config.get("hcr_variance_bound_weight", 0.0)),
+            )
+            loss = loss + hcr_denominator_loss + hcr_coefficient_loss + hcr_variance_loss
+            aux_metrics.update(
+                {
+                    "aux_hcr_denominator_loss": float(hcr_denominator_loss.detach().item()),
+                    "aux_hcr_coefficient_loss": float(hcr_coefficient_loss.detach().item()),
+                    "aux_hcr_variance_bound_loss": float(hcr_variance_loss.detach().item()),
+                }
+            )
 
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
@@ -369,6 +403,7 @@ def train(config: dict[str, Any]) -> dict[str, Any]:
                 "tokens_per_sec": step * batch_size * context_length / elapsed,
             }
             metrics.update({f"state_{k}": v for k, v in summarize_state(state).items()})
+            metrics.update(aux_metrics)
             emit_metrics(metrics, config)
             logger.write(metrics)
 

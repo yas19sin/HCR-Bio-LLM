@@ -46,3 +46,50 @@ def basis_entropy_loss(
     entropy = -(probs * probs.log()).sum(dim=-1).mean()
     return weight * torch.relu(torch.tensor(min_entropy, device=basis.device) - entropy)
 
+
+def hcr_denominator_stability_loss(
+    denominator: torch.Tensor | None,
+    min_abs: float = 0.05,
+    negative_weight: float = 1.0,
+    weight: float = 0.0,
+) -> torch.Tensor:
+    """Discourage invalid or nearly singular HCR conditional normalizers."""
+
+    if denominator is None or weight <= 0:
+        device = denominator.device if denominator is not None else "cpu"
+        return torch.tensor(0.0, device=device)
+    denom = denominator.float()
+    small = torch.relu(torch.tensor(min_abs, device=denom.device) - denom.abs()).pow(2).mean()
+    negative = torch.relu(-denom).pow(2).mean()
+    return weight * (small + negative_weight * negative)
+
+
+def hcr_conditional_coefficient_loss(
+    coefficients: torch.Tensor | None,
+    max_rms: float = 4.0,
+    weight: float = 0.0,
+) -> torch.Tensor:
+    """Limit non-normalizer conditional coefficients to avoid density blow-ups."""
+
+    if coefficients is None or weight <= 0:
+        device = coefficients.device if coefficients is not None else "cpu"
+        return torch.tensor(0.0, device=device)
+    nontrivial = coefficients.float()[..., 1:]
+    if nontrivial.numel() == 0:
+        return torch.tensor(0.0, device=coefficients.device)
+    rms = nontrivial.pow(2).mean().sqrt()
+    return weight * torch.relu(rms - torch.tensor(max_rms, device=coefficients.device)).pow(2)
+
+
+def hcr_variance_bound_loss(
+    variance: torch.Tensor | None,
+    max_variance: float = 0.25,
+    weight: float = 0.0,
+) -> torch.Tensor:
+    """Keep normalized conditional variances inside the [0, 1] variable range."""
+
+    if variance is None or weight <= 0:
+        device = variance.device if variance is not None else "cpu"
+        return torch.tensor(0.0, device=device)
+    upper = torch.relu(variance.float() - torch.tensor(max_variance, device=variance.device))
+    return weight * upper.pow(2).mean()

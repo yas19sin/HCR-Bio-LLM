@@ -57,6 +57,13 @@ FAIR_REFINEMENT_MODEL = ModelSpec(
     "fair_4m_different_task",
 )
 
+FAITHFUL_HCR_MODEL = ModelSpec(
+    "hcr_blockwise_joint",
+    "configs/faithful_hcr/ntp_stable.yaml",
+    "causal",
+    "faithful_hcr_ntp_stable",
+)
+
 SUITES = {
     "causal-core": CORE_CAUSAL_MODELS,
     "causal": [*CORE_CAUSAL_MODELS, BLOCKWISE_MODEL],
@@ -67,6 +74,7 @@ SUITES = {
     "fair-denoising": [FAIR_REFINEMENT_MODEL],
     "fair-all": FAIR_CAUSAL_MODELS,
     "fair-research-all": [*FAIR_CAUSAL_MODELS, FAIR_REFINEMENT_MODEL],
+    "faithful-hcr": [FAITHFUL_HCR_MODEL],
 }
 
 
@@ -98,6 +106,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dry-run", action="store_true", help="Print and record commands without running them.")
     parser.add_argument("--keep-going", action="store_true", help="Continue after a model command fails.")
     parser.add_argument(
+        "--progress",
+        default="train",
+        choices=["off", "train", "all"],
+        help="Mirror subprocess output to the notebook while still saving logs.",
+    )
+    parser.add_argument(
         "--train-stdout",
         default="compact",
         choices=["compact", "full", "quiet"],
@@ -112,7 +126,13 @@ def value_for_override(value: Any) -> str:
     return str(value)
 
 
-def run_command(cmd: list[str], log_path: Path, dry_run: bool) -> int:
+def run_command(
+    cmd: list[str],
+    log_path: Path,
+    dry_run: bool,
+    echo: bool = False,
+    echo_prefix: str = "",
+) -> int:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("w", encoding="utf-8") as log_file:
         log_file.write("$ " + " ".join(cmd) + "\n")
@@ -130,6 +150,10 @@ def run_command(cmd: list[str], log_path: Path, dry_run: bool) -> int:
         for line in process.stdout:
             log_file.write(line)
             log_file.flush()
+            if echo:
+                text = line.rstrip()
+                if text:
+                    print(f"{echo_prefix}{text}", flush=True)
         return process.wait()
 
 
@@ -174,7 +198,7 @@ def parse_metrics(run_dir: Path) -> dict[str, Any]:
 
 
 def command_with_overrides(python: str, config: str, overrides: dict[str, Any]) -> list[str]:
-    cmd = [python, "train.py", "--config", config]
+    cmd = [python, "-u", "train.py", "--config", config]
     for key, value in overrides.items():
         cmd.extend(["--set", f"{key}={value_for_override(value)}"])
     return cmd
@@ -400,7 +424,13 @@ def main() -> None:
                 "device": args.device,
             }
             cmd = command_with_overrides(args.python, model.config, overrides)
-            code = run_command(cmd, train_log, args.dry_run)
+            code = run_command(
+                cmd,
+                train_log,
+                args.dry_run,
+                echo=args.progress in {"train", "all"},
+                echo_prefix=f"{model.name} | ",
+            )
             if code != 0:
                 status = "failed"
                 errors.append(f"train.py exited {code}")
@@ -419,6 +449,7 @@ def main() -> None:
             print(f"[{index}/{len(models)}] {model.name}: final eval")
             cmd = [
                 args.python,
+                "-u",
                 "eval.py",
                 "--checkpoint",
                 str(checkpoint),
@@ -427,7 +458,13 @@ def main() -> None:
                 "--device",
                 args.device,
             ]
-            code = run_command(cmd, eval_path, args.dry_run)
+            code = run_command(
+                cmd,
+                eval_path,
+                args.dry_run,
+                echo=args.progress == "all",
+                echo_prefix=f"{model.name} eval | ",
+            )
             if code != 0:
                 status = "failed"
                 errors.append(f"eval.py exited {code}")
@@ -438,6 +475,7 @@ def main() -> None:
             print(f"[{index}/{len(models)}] {model.name}: uncertainty")
             cmd = [
                 args.python,
+                "-u",
                 "analyze_uncertainty.py",
                 "--checkpoint",
                 str(checkpoint),
@@ -446,7 +484,13 @@ def main() -> None:
                 "--device",
                 args.device,
             ]
-            code = run_command(cmd, uncertainty_path, args.dry_run)
+            code = run_command(
+                cmd,
+                uncertainty_path,
+                args.dry_run,
+                echo=args.progress == "all",
+                echo_prefix=f"{model.name} uncertainty | ",
+            )
             if code != 0:
                 status = "failed"
                 errors.append(f"analyze_uncertainty.py exited {code}")
@@ -457,6 +501,7 @@ def main() -> None:
             print(f"[{index}/{len(models)}] {model.name}: sample")
             cmd = [
                 args.python,
+                "-u",
                 "sample.py",
                 "--checkpoint",
                 str(checkpoint),
@@ -467,7 +512,13 @@ def main() -> None:
                 "--device",
                 args.device,
             ]
-            code = run_command(cmd, sample_path, args.dry_run)
+            code = run_command(
+                cmd,
+                sample_path,
+                args.dry_run,
+                echo=args.progress == "all",
+                echo_prefix=f"{model.name} sample | ",
+            )
             if code != 0:
                 status = "failed"
                 errors.append(f"sample.py exited {code}")

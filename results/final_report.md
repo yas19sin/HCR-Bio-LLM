@@ -140,6 +140,37 @@ context. Its good validation loss means it is good at masked reconstruction,
 not at causal text generation. This result should not be compared directly to
 causal LM validation losses.
 
+## 5.2 Fair 4M Causal NTP Results
+
+The first parameter-matched causal benchmark used:
+
+- suite: `fair-causal`
+- steps: `10000`
+- seed: `1337`
+- eval batches: `20`
+- dataset: `Trelis/tiny-shakespeare`
+- output directory: `runs/benchmark_suites/fair_4m_10k`
+
+All rows are causal next-token prediction models near a 4M trainable-parameter
+budget. They are not compute-matched, so throughput matters.
+
+| Model | Params | Loss | d_loss vs baseline | Acc | PPL | ECE | Brier | Corrupt x | tok/s |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Transformer baseline | 4,069,728 | 1.4893 |  | 0.5613 | 4.4340 | 0.0466 | 0.4215 | 1.3203 | 72,117 |
+| HCR-KAN mean | 4,031,508 | 1.4851 | -0.0042 | 0.5615 | 4.4155 | 0.0511 | 0.4207 | 1.4978 | 13,699 |
+| HCR moment | 3,959,124 | 1.5472 | +0.0579 | 0.5416 | 4.6982 | 0.0393 | 0.4434 | 1.3471 | 65,326 |
+| HCR density | 3,914,900 | 1.5337 | +0.0444 | 0.5427 | 4.6354 | 0.0347 | 0.4448 | 1.3310 | 61,544 |
+| HCR joint pairwise | 4,090,696 | 1.5536 | +0.0643 | 0.5419 | 4.7286 | 0.0408 | 0.4449 | 1.3498 | 61,070 |
+| HCR blockwise joint | 4,033,808 | 1.5605 | +0.0712 | 0.5399 | 4.7614 | 0.0551 | 0.4428 | 1.3131 | 17,486 |
+
+This run does not support a causal HCR NTP advantage. The only model with lower
+loss than the baseline is `hcr_kan_mean`, by `0.0042`, but that model is a
+KAN/RBF-style bridge rather than HCR joint-density evidence, and it is roughly
+5.3x slower than the baseline in this run. The HCR-specific causal variants
+lost on first-pass language-modeling quality, although `hcr_moment` and
+`hcr_density` had better ECE than the baseline. That calibration signal is
+interesting but not enough to claim better generation or better NTP.
+
 The paper-direct HCR faithfulness check passed before the density-state carry
 extension via `hcr_faithfulness_check.py`:
 
@@ -234,19 +265,40 @@ mixed-moment mechanics now live in `src/model/hcr_moments.py`.
 
 ## 13. Most Promising Next Direction
 
-Run the parameter-matched causal NTP suite:
+The parameter-matched causal NTP suite has now run, and the HCR-specific causal
+variants did not beat the Transformer baseline on validation loss or
+perplexity. The next step is no longer more same-shape benchmarking; it is to
+fix the HCR translation into a causal Transformer.
 
-1. `transformer_baseline`
-2. `hcr_kan_mean`
-3. `hcr_moment`
-4. `hcr_density`
-5. `hcr_joint_pairwise`
-6. `hcr_blockwise_joint`
+The most promising engineering direction is:
 
-Then compare causal validation loss, perplexity, ECE, Brier score, corruption
-degradation, throughput, and variance/error correlation. This is the shortest
-path to seeing whether the HCR distributional channels carry useful NTP signal
-beyond extra parameters.
+1. Stabilize `hcr_blockwise_joint` denominators and coefficients during causal
+   NTP.
+2. Replace `sigmoid(hidden)` with learned/empirical CDF normalization or another
+   measured normalization path for hidden variables.
+3. Propagate density-vector state through attention/projection operations, not
+   just the HCR FFN chain.
+4. Add auxiliary conditional/reverse objectives for the explicit HCR path, so
+   the coefficient tensors are trained to be useful distributions rather than
+   only indirectly optimized through next-token cross entropy.
+5. Keep `hcr_kan_mean` as a separate KAN/RBF-style baseline. Its tiny loss win
+   is not HCR evidence, especially given the large throughput cost.
+
+This direction is now represented by `configs/faithful_hcr/ntp_stable.yaml` and
+the `faithful-hcr` benchmark suite. That suite trains only
+`hcr_blockwise_joint`, the closest paper-direct causal model in this repo. The
+config keeps explicit blockwise product-basis coefficients and carried density
+state, while adding auxiliary losses that penalize:
+
+- small or negative HCR conditional denominators,
+- exploding non-normalizer conditional coefficients,
+- normalized conditional variance above the `[0, 1]` variable bound.
+
+The next focused run is:
+
+```bash
+python run_benchmark_suite.py --suite faithful-hcr --steps 10000 --run-name faithful_hcr_ntp_10k
+```
 
 In parallel, use `HCRLocalJointDensity` and `hcr_synthetic_demo.py` on synthetic
 normalized variables to validate paper-faithful conditional propagation, then
@@ -254,12 +306,12 @@ compare that behavior with `hcr_blockwise_joint` inside the language model.
 
 The upstream review changes the priority order:
 
-1. Propagate density-vector state through attention/projection operations, not
-   just the HCR FFN chain.
+1. Stabilize the explicit blockwise HCR denominator/coefficient path for causal
+   NTP.
 2. Add learned/empirical CDF normalization or another measured normalization
    path for hidden variables.
-3. Stabilize the explicit blockwise HCR denominator/coefficient path for causal
-   NTP.
+3. Propagate density-vector state through attention/projection operations, not
+   just the HCR FFN chain.
 4. Add a separate KAN baseline, preferably efficient spline KAN or FastKAN-like
    RBF plus LayerNorm and base update.
 5. Keep KAN/GPT/KAT results as baselines, not as proof of HCR behavior.

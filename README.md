@@ -20,6 +20,19 @@ approximation.
 External upstream sources from Wolfram Community and the KAN/HCR GitHub repos
 are summarized in [docs/upstream_grounding.md](docs/upstream_grounding.md).
 
+## Current Status
+
+The fair 4M causal next-token benchmark did not validate an HCR advantage yet.
+The Transformer baseline reached loss `1.4893`; the HCR-specific causal models
+were worse (`hcr_density=1.5337`, `hcr_moment=1.5472`,
+`hcr_joint_pairwise=1.5536`, `hcr_blockwise_joint=1.5605`). `hcr_kan_mean`
+barely beat the baseline at `1.4851`, but it is a KAN/RBF-style bridge rather
+than HCR joint-density evidence and was much slower.
+
+The project is now focused on making the faithful `hcr_blockwise_joint` path
+work as an HCR-style causal NTP model instead of continuing broad comparisons
+between partial approximations.
+
 ## Implemented Models
 
 - `transformer_baseline`: small GPT-style causal Transformer.
@@ -114,6 +127,22 @@ seed, context length, batch size, optimizer settings, step count, eval interval,
 eval batch count, and approximate parameter budget. It is still not compute-
 matched because the architectures do different work per token, so the generated
 report shows throughput as well as parameter counts.
+
+After the first fair 4M run, the HCR-specific causal variants did not beat the
+Transformer baseline. The project now focuses on the most paper-direct path
+instead of broad model comparisons. Run only the faithful HCR NTP track with:
+
+```bash
+python run_benchmark_suite.py --suite faithful-hcr --steps 10000 --run-name faithful_hcr_ntp_10k
+```
+
+This uses `configs/faithful_hcr/ntp_stable.yaml`, which trains
+`hcr_blockwise_joint` with explicit blockwise product-basis coefficients,
+carried density state, and auxiliary stability losses for conditional
+denominators, coefficient magnitude, and normalized conditional variance.
+Suite runs mirror compact training progress to the notebook by default while
+still writing complete logs to `suite_logs/train.log`. Use `--progress off` for
+quiet runs or `--progress all` to also mirror eval/uncertainty/sample output.
 
 The denoising refinement model is a separate, optional reconstruction task. It
 is intentionally outside the NTP benchmark:
