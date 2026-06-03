@@ -47,9 +47,18 @@ which implements:
 This module is the most literal implementation of the HCR paper primitive in the
 repo.
 
+The repo also includes
+[src/model/hcr_sequence.py](../src/model/hcr_sequence.py), a standalone small
+sequence-density wrapper around the same primitive. It keeps per-variable
+empirical-CDF normalization explicit, estimates product-basis mixed moments over
+causal context/target windows, and exposes forward conditioning, reverse
+conditioning, conditional variance, conditional log density, mode, and sampling.
+This is faithful local HCR/HCM mechanics, not a Transformer language model.
+
 The root-level `hcr_faithfulness_check.py` script is the executable check for
 these claims. It verifies shifted-Legendre orthonormality, local HCR
 conditioning/reverse inference, density-vector propagation identity, and the
+standalone sequence-density nonlinear transition task, plus the
 `hcr_blockwise_joint` carried density-state and conditional coefficient/variance
 state surface.
 
@@ -73,6 +82,7 @@ projections for a cheap Transformer-compatible baseline.
 | Component | Paper-faithful? | Current status |
 |---|---|---|
 | `src/model/hcr_moments.py` | Close for small dense local HCR distributions | Implements product-basis mixed-moment mechanics directly. |
+| `src/model/hcr_sequence.py` | Close for small local HCR sequence densities | Uses explicit CDF normalization and local window coefficients for forward/reverse conditioning. |
 | `hcr_blockwise_joint` | Close for a trainable expected-value HCR neuron | Uses explicit blockwise product-basis coefficient tensors, substitutes sigmoid-normalized hidden inputs as a practical proxy, normalizes `rho(y | x)`, carries conditional density coefficients between HCR FFNs, exposes conditional coefficient vectors and conditional variance, and feeds expected values on the residual hidden path. Reverse conditioning uses the same tensor transposed, but reverse reconstruction is not yet an LM evaluation path. |
 | `hcr_kan_mean` | Partial | KAN-inspired radial-basis mean propagation, not spline edge KAN. |
 | `hcr_moment` | Partial | Carries `mu` and `log_var`, matching the value/variance motivation but not full mixed-moment density coefficients. |

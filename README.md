@@ -35,6 +35,17 @@ baseline and worse than the earlier fair blockwise run. That means the current
 paper-direct implementation still needs debugging and architectural fidelity
 work before it can support an HCR causal-LM claim.
 
+A standalone faithful local HCM/HCR sequence-density prototype now exists in
+[src/model/hcr_sequence.py](src/model/hcr_sequence.py), with a runnable demo in
+[faithful_hcm_sequence_demo.py](faithful_hcm_sequence_demo.py). This path uses
+per-variable empirical-CDF normalization, product-basis mixed-moment
+coefficients over causal context/target windows, HCR conditional means, reverse
+conditioning with the same density, conditional variance, conditional log
+density, grid mode, and sampling. On the default controlled nonlinear
+transition task it reaches raw forward MSE `0.0069` versus linear `0.0446`.
+This validates the local HCR conditional-density mechanics, not the failed
+Transformer-shell language-model claim.
+
 ## Implemented Models
 
 - `transformer_baseline`: small GPT-style causal Transformer.
@@ -57,6 +68,10 @@ work before it can support an HCR causal-LM claim.
 - `hcr_bidirectional_refinement`: non-causal denoising side branch with
   iterative refinement and per-step loss support. It is not a next-token
   prediction model and should not be used for causal generation claims.
+- `HCRSequenceDensityModel`: standalone small local HCR/HCM sequence-density
+  prototype, not a Transformer. It estimates explicit product-basis
+  coefficients over normalized context/target windows and performs causal and
+  reverse conditioning from that same local density.
 
 For a literal small-block HCR primitive, see
 [src/model/hcr_moments.py](src/model/hcr_moments.py). It implements shifted
@@ -90,6 +105,12 @@ Run the small synthetic HCR conditional-density demo:
 
 ```bash
 python hcr_synthetic_demo.py
+```
+
+Run the standalone faithful local HCM/HCR sequence-density demo:
+
+```bash
+python faithful_hcm_sequence_demo.py
 ```
 
 Run the source-grounded HCR faithfulness check:

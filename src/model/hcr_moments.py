@@ -219,6 +219,50 @@ class HCRLocalJointDensity:
         cond = self.conditional_coefficients(known_values, target_index)
         return hcr_variance_from_coefficients(cond)
 
+    def conditional_density(
+        self,
+        known_values: torch.Tensor,
+        target_values: torch.Tensor,
+        target_index: int,
+        calibration_floor: float = 1e-4,
+        calibration: str = "floor",
+        beta: float = 1.0,
+    ) -> torch.Tensor:
+        """Evaluate a positive 1D conditional density at target values."""
+
+        cond = self.conditional_coefficients(known_values, target_index)
+        target_values = target_values.to(device=known_values.device, dtype=known_values.dtype)
+        if target_values.shape == (*known_values.shape[:-1], 1):
+            target_values = target_values.squeeze(-1)
+        basis = shifted_legendre_basis(target_values, self.degree)
+        density = (cond * basis).sum(dim=-1)
+        return _calibrate_raw_density(
+            density,
+            calibration=calibration,
+            floor=calibration_floor,
+            beta=beta,
+        )
+
+    def conditional_log_density(
+        self,
+        known_values: torch.Tensor,
+        target_values: torch.Tensor,
+        target_index: int,
+        calibration_floor: float = 1e-4,
+        calibration: str = "floor",
+        beta: float = 1.0,
+    ) -> torch.Tensor:
+        """Evaluate log rho(x_target | known others) with positive calibration."""
+
+        return self.conditional_density(
+            known_values,
+            target_values,
+            target_index,
+            calibration_floor=calibration_floor,
+            calibration=calibration,
+            beta=beta,
+        ).log()
+
     def conditional_density_grid(
         self,
         known_values: torch.Tensor,

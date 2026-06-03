@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 
 import torch
 
@@ -12,6 +13,7 @@ from src.model.hcr_moments import (
     hcr_variance_from_coefficients,
     shifted_legendre_basis,
 )
+from src.model.hcr_sequence import ColumnEmpiricalCDFNormalizer, HCRSequenceDensityModel
 
 
 def build_correlated_samples(n_samples: int, noise: float, seed: int) -> torch.Tensor:
@@ -19,6 +21,27 @@ def build_correlated_samples(n_samples: int, noise: float, seed: int) -> torch.T
     x = torch.rand(n_samples, 1, generator=generator)
     y = (0.15 + 0.75 * x + noise * torch.randn(n_samples, 1, generator=generator)).clamp(0.0, 1.0)
     return torch.cat([x, y], dim=-1)
+
+
+def build_nonlinear_transition_windows(
+    n_windows: int,
+    context_length: int,
+    noise: float,
+    seed: int,
+) -> torch.Tensor:
+    generator = torch.Generator().manual_seed(seed)
+    context = torch.rand(n_windows, context_length, generator=generator)
+    signal = 0.5 + 0.34 * torch.sin(2.0 * math.pi * context[:, 0])
+    if context_length > 1:
+        signal = signal + 0.18 * torch.cos(2.0 * math.pi * context[:, 1])
+        signal = signal + 0.10 * (context[:, 0] - 0.5) * (context[:, -1] - 0.5)
+    target = (signal + noise * torch.randn(n_windows, generator=generator)).clamp(0.0, 1.0)
+    return torch.cat([context, target.unsqueeze(-1)], dim=-1)
+
+
+def fit_linear(context: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    design = torch.cat([torch.ones(context.size(0), 1), context], dim=-1)
+    return torch.linalg.lstsq(design, target.unsqueeze(-1)).solution.squeeze(-1)
 
 
 @torch.no_grad()
@@ -67,6 +90,65 @@ def check_local_hcr_density() -> dict[str, float | int | list[int]]:
         "local_propagation_variance_mse": float((propagated_var_y - var_y).pow(2).mean().item()),
         "local_nonzero_coefficients": int((density.coefficients.abs() > 1e-12).sum().item()),
         "local_marginal_x_coeff_shape": list(density.marginal_coefficients(0).shape),
+    }
+
+
+@torch.no_grad()
+def check_sequence_hcr_density() -> dict[str, float | int | list[int] | bool]:
+    context_length = 2
+    windows_raw = build_nonlinear_transition_windows(
+        n_windows=2000,
+        context_length=context_length,
+        noise=0.08,
+        seed=1337,
+    )
+    split = 1500
+    normalizer = ColumnEmpiricalCDFNormalizer.fit(windows_raw[:split])
+    windows = normalizer.transform(windows_raw)
+    train_windows = windows[:split]
+    test_windows = windows[split:]
+    test_raw_windows = windows_raw[split:]
+
+    model = HCRSequenceDensityModel.from_windows(
+        train_windows,
+        context_length=context_length,
+        degree=6,
+        max_total_degree=6,
+    )
+    train_context = train_windows[:, :context_length]
+    train_target = train_windows[:, context_length]
+    test_context = test_windows[:, :context_length]
+    test_target = test_windows[:, context_length]
+
+    hcr = model.predict_mean(test_context)
+    linear_weights = fit_linear(train_context, train_target)
+    linear_design = torch.cat([torch.ones(test_context.size(0), 1), test_context], dim=-1)
+    linear = (linear_design @ linear_weights).clamp(0.0, 1.0)
+
+    hcr_raw = normalizer.inverse_column(hcr, context_length)
+    linear_raw = normalizer.inverse_column(linear, context_length)
+    target_raw = test_raw_windows[:, context_length]
+    hcr_raw_mse = (hcr_raw - target_raw).pow(2).mean()
+    linear_raw_mse = (linear_raw - target_raw).pow(2).mean()
+
+    reverse_target_index = context_length - 1
+    reverse_hcr = model.conditional_mean_known(test_windows, target_index=reverse_target_index)
+    reverse_raw = normalizer.inverse_column(reverse_hcr, reverse_target_index)
+    reverse_target_raw = test_raw_windows[:, reverse_target_index]
+
+    return {
+        "sequence_coeff_shape": list(model.density.coefficients.shape),
+        "sequence_nonzero_coefficients": int((model.density.coefficients.abs() > 1e-12).sum().item()),
+        "sequence_forward_hcr_raw_mse": float(hcr_raw_mse.item()),
+        "sequence_forward_linear_raw_mse": float(linear_raw_mse.item()),
+        "sequence_forward_hcr_beats_linear": bool(hcr_raw_mse < linear_raw_mse),
+        "sequence_reverse_hcr_raw_mse": float(
+            (reverse_raw - reverse_target_raw).pow(2).mean().item()
+        ),
+        "sequence_conditional_variance_mean": float(model.predict_variance(test_context).mean().item()),
+        "sequence_log_prob_mean": float(
+            model.conditional_log_prob(test_context, test_target, calibration="softplus").mean().item()
+        ),
     }
 
 
@@ -143,6 +225,7 @@ def assert_thresholds(results: dict[str, object]) -> None:
         "local_propagation_mean_mse": 1e-10,
         "local_propagation_variance_mse": 1e-10,
         "blockwise_propagation_coeff_max_abs_diff": 1e-7,
+        "sequence_forward_hcr_raw_mse": 2e-2,
     }
     failures: list[str] = []
     for key, max_value in thresholds.items():
@@ -155,6 +238,8 @@ def assert_thresholds(results: dict[str, object]) -> None:
         failures.append("lm_loss_finite=False")
     if not bool(results["lm_has_hcr_state"]):
         failures.append("lm_has_hcr_state=False")
+    if not bool(results["sequence_forward_hcr_beats_linear"]):
+        failures.append("sequence_forward_hcr_beats_linear=False")
     if results["blockwise_carried_coeff_shape"] != [2, 3, 4, 9]:
         failures.append(f"blockwise_carried_coeff_shape={results['blockwise_carried_coeff_shape']}")
     if results["lm_density_coeff_shape"] != [2, 8, 8, 9]:
@@ -173,6 +258,7 @@ def main() -> None:
     results: dict[str, object] = {}
     results.update(check_basis_orthonormality())
     results.update(check_local_hcr_density())
+    results.update(check_sequence_hcr_density())
     results.update(check_blockwise_neuron())
     results.update(check_blockwise_lm_state())
     assert_thresholds(results)

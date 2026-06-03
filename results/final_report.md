@@ -194,22 +194,68 @@ loss/perplexity regression. The right conclusion is that this implementation
 still needs fidelity and optimization work before it can test the paper's HCR
 claim inside a causal LM.
 
-The paper-direct HCR faithfulness check passed before the density-state carry
-extension via `hcr_faithfulness_check.py`:
+## 5.4 Standalone Faithful Local HCM/HCR Prototype
+
+The repo now includes a smaller faithful path that does not use a Transformer
+shell: `HCRSequenceDensityModel` in `src/model/hcr_sequence.py`, with the
+runnable script `faithful_hcm_sequence_demo.py`.
+
+This prototype estimates one local HCR joint density over normalized
+context/target windows:
+
+```text
+[x_t, x_{t+1}, ..., x_{t+k}] -> product-basis mixed-moment coefficients
+```
+
+It uses per-variable empirical-CDF normalization, then performs conditional
+mean prediction, reverse conditioning, variance estimation, conditional log
+density, grid mode, and sampling from the same coefficient tensor.
+
+Default controlled nonlinear transition run:
+
+```bash
+python faithful_hcm_sequence_demo.py
+```
+
+Key metrics from the default run:
+
+| Metric | Value |
+|---|---:|
+| source | transition |
+| context length | 2 |
+| degree | 5 |
+| max total degree | 5 |
+| coefficient shape | `[6, 6, 6]` |
+| nonzero coefficients | 56 |
+| HCR mean raw forward MSE | 0.0069 |
+| linear raw forward MSE | 0.0446 |
+| persistence raw forward MSE | 0.1590 |
+| train-mean raw forward MSE | 0.0775 |
+| HCR same-density reverse raw MSE | 0.0800 |
+| linear reverse raw MSE | 0.0804 |
+
+This is the most faithful implementation in the repo for local HCR/HCM
+conditional mechanics. It is explicitly not a language-model win: it validates
+the local normalized joint-density primitive on a controlled problem. The gap is
+still translating this into a useful, scalable causal LM architecture without
+falling back to a mostly ordinary Transformer.
+
+The paper-direct HCR faithfulness check now passes via
+`hcr_faithfulness_check.py`:
 
 - shifted-Legendre basis Gram max error: `4.77e-7`
 - local forward `E[y | x]` MSE: `0.000268`
 - local reverse `E[x | y]` MSE: `0.001477`
 - local density-vector propagation coefficient max error: `2.38e-7`
 - propagated mean/variance MSE: `< 1e-15`
+- standalone sequence-density HCR raw forward MSE: `0.00776`
+- standalone sequence-density linear raw forward MSE: `0.04075`
 - blockwise HCR propagation coefficient max error: `0.0`
 - blockwise LM exposed conditional coefficients, conditional mean/variance,
   denominator diagnostics, and finite loss in a one-batch check
 
-The check has since been extended to require carried HCR density-state keys and
-shapes in a two-layer `hcr_blockwise_joint` LM. That latest runtime check is
-pending because the local Python launcher was blocked by the environment usage
-limit after the implementation change.
+The check also requires carried HCR density-state keys and shapes in a two-layer
+`hcr_blockwise_joint` LM.
 
 ## 6. Optional Denoising / Masked Reconstruction Side Branch
 
