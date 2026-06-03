@@ -46,6 +46,17 @@ transition task it reaches raw forward MSE `0.0069` versus linear `0.0446`.
 This validates the local HCR conditional-density mechanics, not the failed
 Transformer-shell language-model claim.
 
+A direct HCM next-token language model now exists in
+[src/model/hcm_ntp_lm.py](src/model/hcm_ntp_lm.py), with a runnable CLI in
+[hcm_ntp_lm.py](hcm_ntp_lm.py). It estimates HCR product-basis coefficients over
+empirical-CDF-normalized token windows, then scores every next-token candidate
+from the HCR conditional density. On a local stable project-file character-LM
+sanity run (`hcr_transformer_intern_project.md`), pure HCM reached loss
+`3.4831` / PPL `32.56`; a count backoff n-gram reached loss `2.3132` / PPL
+`10.11`; and an HCM-rescored n-gram with HCM weight `0.5` reached loss `1.8733`
+/ PPL `6.51`. This is now a real HCM-driven NTP language model path, but it is
+still a small local model and not a Transformer-scale LLM.
+
 ## Implemented Models
 
 - `transformer_baseline`: small GPT-style causal Transformer.
@@ -72,6 +83,10 @@ Transformer-shell language-model claim.
   prototype, not a Transformer. It estimates explicit product-basis
   coefficients over normalized context/target windows and performs causal and
   reverse conditioning from that same local density.
+- `HCMNextTokenLanguageModel`: direct small HCM/HCR character NTP language
+  model. It turns token windows into per-column empirical-CDF variables, uses
+  local HCR conditional density to score next-token candidates, and can also be
+  used as a log-linear HCM rescoring factor over a discrete backoff n-gram LM.
 
 For a literal small-block HCR primitive, see
 [src/model/hcr_moments.py](src/model/hcr_moments.py). It implements shifted
@@ -111,6 +126,18 @@ Run the standalone faithful local HCM/HCR sequence-density demo:
 
 ```bash
 python faithful_hcm_sequence_demo.py
+```
+
+Run the direct HCM next-token language model on a local text file:
+
+```bash
+python hcm_ntp_lm.py --data-path hcr_transformer_intern_project.md --context-length 4 --degree 4 --max-total-degree 4 --max-train-windows 30000 --eval-windows 3000 --hybrid-weights 0.05,0.1,0.25,0.5
+```
+
+Run it on the same Tiny Shakespeare source used by the benchmark configs:
+
+```bash
+python hcm_ntp_lm.py --hf-dataset Trelis/tiny-shakespeare --hf-max-rows 1000 --context-length 4 --degree 4 --max-total-degree 4 --max-train-windows 50000 --eval-windows 5000
 ```
 
 Run the source-grounded HCR faithfulness check:

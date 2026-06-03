@@ -6,6 +6,7 @@ import math
 import torch
 
 from src.model import build_model
+from src.model.hcm_ntp_lm import HCMNextTokenLanguageModel
 from src.model.hcr_joint_block import HCRBlockwiseJointNeuron
 from src.model.hcr_moments import (
     HCRLocalJointDensity,
@@ -153,6 +154,36 @@ def check_sequence_hcr_density() -> dict[str, float | int | list[int] | bool]:
 
 
 @torch.no_grad()
+def check_hcm_ntp_lm() -> dict[str, float | int | bool | list[int]]:
+    base = torch.tensor([2, 3, 4, 5, 6], dtype=torch.long)
+    token_ids = base.repeat(160)
+    train_ids = token_ids[:640]
+    val_ids = token_ids[640:]
+    model = HCMNextTokenLanguageModel.fit(
+        train_ids,
+        context_length=2,
+        vocab_size=7,
+        degree=5,
+        max_total_degree=5,
+        max_train_windows=None,
+        seed=1337,
+        disallowed_token_ids=(0, 1),
+        calibration="floor",
+    )
+    metrics = model.evaluate(val_ids, max_windows=None, batch_size=128)
+    allowed_tokens = 5
+    uniform_loss = math.log(allowed_tokens)
+    return {
+        "hcm_ntp_coeff_shape": list(model.density.coefficients.shape),
+        "hcm_ntp_nonzero_coefficients": model.nonzero_coefficients,
+        "hcm_ntp_loss": metrics.loss,
+        "hcm_ntp_accuracy": metrics.accuracy,
+        "hcm_ntp_perplexity": metrics.perplexity,
+        "hcm_ntp_beats_uniform": bool(metrics.loss < uniform_loss),
+    }
+
+
+@torch.no_grad()
 def check_blockwise_neuron() -> dict[str, float | list[int]]:
     torch.manual_seed(2026)
     neuron = HCRBlockwiseJointNeuron(d_model=8, block_size=2, degree=2)
@@ -226,6 +257,7 @@ def assert_thresholds(results: dict[str, object]) -> None:
         "local_propagation_variance_mse": 1e-10,
         "blockwise_propagation_coeff_max_abs_diff": 1e-7,
         "sequence_forward_hcr_raw_mse": 2e-2,
+        "hcm_ntp_loss": 1.0,
     }
     failures: list[str] = []
     for key, max_value in thresholds.items():
@@ -240,6 +272,8 @@ def assert_thresholds(results: dict[str, object]) -> None:
         failures.append("lm_has_hcr_state=False")
     if not bool(results["sequence_forward_hcr_beats_linear"]):
         failures.append("sequence_forward_hcr_beats_linear=False")
+    if not bool(results["hcm_ntp_beats_uniform"]):
+        failures.append("hcm_ntp_beats_uniform=False")
     if results["blockwise_carried_coeff_shape"] != [2, 3, 4, 9]:
         failures.append(f"blockwise_carried_coeff_shape={results['blockwise_carried_coeff_shape']}")
     if results["lm_density_coeff_shape"] != [2, 8, 8, 9]:
@@ -259,6 +293,7 @@ def main() -> None:
     results.update(check_basis_orthonormality())
     results.update(check_local_hcr_density())
     results.update(check_sequence_hcr_density())
+    results.update(check_hcm_ntp_lm())
     results.update(check_blockwise_neuron())
     results.update(check_blockwise_lm_state())
     assert_thresholds(results)

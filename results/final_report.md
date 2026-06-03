@@ -240,6 +240,55 @@ the local normalized joint-density primitive on a controlled problem. The gap is
 still translating this into a useful, scalable causal LM architecture without
 falling back to a mostly ordinary Transformer.
 
+## 5.5 Direct HCM Next-Token Language Model
+
+The repo now includes a direct HCM/HCR next-token language model:
+
+- source: `src/model/hcm_ntp_lm.py`
+- CLI: `hcm_ntp_lm.py`
+
+This is not a Transformer. It is a small local character LM where HCM directly
+contributes to NTP:
+
+1. Build token windows `[x_{t-k}, ..., x_{t-1}, x_t]`.
+2. Normalize each window column with its own empirical CDF.
+3. Estimate HCR product-basis mixed-moment coefficients over the full local
+   context/target window.
+4. Condition on the context with the HCR formula.
+5. Score every next-token candidate from the HCR conditional density.
+6. Convert continuous target density back to discrete token probability using
+   the target token's empirical CDF bin mass.
+
+The CLI also evaluates a discrete backoff n-gram baseline and a log-linear
+hybrid where HCM is a direct rescoring factor:
+
+```text
+p(token | context) proportional to p_ngram(token | context)^(1-w)
+                                * p_hcm(token | context)^w
+```
+
+Local sanity run on the stable project file `hcr_transformer_intern_project.md`:
+
+```bash
+python hcm_ntp_lm.py --data-path hcr_transformer_intern_project.md --context-length 4 --degree 4 --max-total-degree 4 --max-train-windows 30000 --eval-windows 3000 --hybrid-weights 0.05,0.1,0.25,0.5 --sample-model hybrid --sample-hybrid-weight 0.5
+```
+
+| Model | Loss | PPL | Acc | Brier |
+|---|---:|---:|---:|---:|
+| Pure HCM NTP | 3.4831 | 32.56 | 0.1187 | 0.8922 |
+| Backoff n-gram | 2.3132 | 10.11 | 0.6050 | 0.3771 |
+| N-gram + HCM, `w=0.05` | 2.2395 | 9.39 | 0.6040 | 0.3774 |
+| N-gram + HCM, `w=0.10` | 2.1692 | 8.75 | 0.6053 | 0.3783 |
+| N-gram + HCM, `w=0.25` | 1.9872 | 7.29 | 0.6063 | 0.3865 |
+| N-gram + HCM, `w=0.50` | 1.8733 | 6.51 | 0.5890 | 0.4479 |
+
+Interpretation: pure HCM is a real NTP language model but is weak on raw
+categorical characters because the continuous CDF ordering is a crude token
+representation. The hybrid result is more promising: HCM directly improves
+negative log-likelihood when used as a conditional-density rescoring factor,
+although Brier score worsens at larger HCM weights. This is the current closest
+artifact to "faithful HCM as a direct contributor to language modeling."
+
 The paper-direct HCR faithfulness check now passes via
 `hcr_faithfulness_check.py`:
 
@@ -250,6 +299,8 @@ The paper-direct HCR faithfulness check now passes via
 - propagated mean/variance MSE: `< 1e-15`
 - standalone sequence-density HCR raw forward MSE: `0.00776`
 - standalone sequence-density linear raw forward MSE: `0.04075`
+- direct HCM NTP ordinal-token loss: `0.9717`
+- direct HCM NTP ordinal-token accuracy: `0.7975`
 - blockwise HCR propagation coefficient max error: `0.0`
 - blockwise LM exposed conditional coefficients, conditional mean/variance,
   denominator diagnostics, and finite loss in a one-batch check

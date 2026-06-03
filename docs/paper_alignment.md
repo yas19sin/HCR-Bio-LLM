@@ -55,10 +55,19 @@ causal context/target windows, and exposes forward conditioning, reverse
 conditioning, conditional variance, conditional log density, mode, and sampling.
 This is faithful local HCR/HCM mechanics, not a Transformer language model.
 
+For next-token prediction, the repo now includes
+[src/model/hcm_ntp_lm.py](../src/model/hcm_ntp_lm.py). It is a direct local HCM
+language model: character-token windows are converted to per-column empirical
+CDF variables, one HCR joint density is estimated over context plus target, and
+the HCR conditional density directly scores next-token candidates. The CLI in
+`hcm_ntp_lm.py` also supports log-linear HCM rescoring over a discrete backoff
+n-gram LM, which is currently the more useful language-model form.
+
 The root-level `hcr_faithfulness_check.py` script is the executable check for
 these claims. It verifies shifted-Legendre orthonormality, local HCR
 conditioning/reverse inference, density-vector propagation identity, and the
-standalone sequence-density nonlinear transition task, plus the
+standalone sequence-density nonlinear transition task, a direct HCM NTP token
+guardrail, plus the
 `hcr_blockwise_joint` carried density-state and conditional coefficient/variance
 state surface.
 
@@ -83,6 +92,7 @@ projections for a cheap Transformer-compatible baseline.
 |---|---|---|
 | `src/model/hcr_moments.py` | Close for small dense local HCR distributions | Implements product-basis mixed-moment mechanics directly. |
 | `src/model/hcr_sequence.py` | Close for small local HCR sequence densities | Uses explicit CDF normalization and local window coefficients for forward/reverse conditioning. |
+| `src/model/hcm_ntp_lm.py` | Close for a small local HCR NTP language model | Uses HCR conditional density to score next-token candidates; hybrid mode uses HCR as a direct log-linear rescoring factor over backoff n-gram probabilities. |
 | `hcr_blockwise_joint` | Close for a trainable expected-value HCR neuron | Uses explicit blockwise product-basis coefficient tensors, substitutes sigmoid-normalized hidden inputs as a practical proxy, normalizes `rho(y | x)`, carries conditional density coefficients between HCR FFNs, exposes conditional coefficient vectors and conditional variance, and feeds expected values on the residual hidden path. Reverse conditioning uses the same tensor transposed, but reverse reconstruction is not yet an LM evaluation path. |
 | `hcr_kan_mean` | Partial | KAN-inspired radial-basis mean propagation, not spline edge KAN. |
 | `hcr_moment` | Partial | Carries `mu` and `log_var`, matching the value/variance motivation but not full mixed-moment density coefficients. |
