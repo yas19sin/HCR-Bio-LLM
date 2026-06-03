@@ -54,8 +54,11 @@ from the HCR conditional density. On a local stable project-file character-LM
 sanity run (`hcr_transformer_intern_project.md`), pure HCM reached loss
 `3.4831` / PPL `32.56`; a count backoff n-gram reached loss `2.3132` / PPL
 `10.11`; and an HCM-rescored n-gram with HCM weight `0.5` reached loss `1.8733`
-/ PPL `6.51`. This is now a real HCM-driven NTP language model path, but it is
-still a small local model and not a Transformer-scale LLM.
+/ PPL `6.51`. The feature-HCM variant, which models deterministic character
+code/class features instead of only token rank, reached pure loss `3.6448` and
+hybrid loss `1.9536` at weight `0.5` on the same run. This is now a real
+HCM-driven NTP language model path, but it is still a small local model and not
+a Transformer-scale LLM.
 
 ## Implemented Models
 
@@ -131,13 +134,13 @@ python faithful_hcm_sequence_demo.py
 Run the direct HCM next-token language model on a local text file:
 
 ```bash
-python hcm_ntp_lm.py --data-path hcr_transformer_intern_project.md --context-length 4 --degree 4 --max-total-degree 4 --max-train-windows 30000 --eval-windows 3000 --hybrid-weights 0.05,0.1,0.25,0.5
+python hcm_ntp_lm.py --data-path hcr_transformer_intern_project.md --context-length 4 --degree 4 --max-total-degree 4 --feature-degree 3 --feature-max-total-degree 3 --max-train-windows 30000 --eval-windows 3000 --hybrid-weights 0.05,0.1,0.25,0.5 --sample-model feature_hybrid --sample-hybrid-weight 0.5 --output-dir runs/hcm_ntp_lm/local_feature_3k
 ```
 
 Run it on the same Tiny Shakespeare source used by the benchmark configs:
 
 ```bash
-python hcm_ntp_lm.py --hf-dataset Trelis/tiny-shakespeare --hf-max-rows 1000 --context-length 4 --degree 4 --max-total-degree 4 --max-train-windows 50000 --eval-windows 5000
+python hcm_ntp_lm.py --hf-dataset Trelis/tiny-shakespeare --hf-max-rows 1000 --context-length 4 --degree 4 --max-total-degree 4 --feature-degree 3 --feature-max-total-degree 3 --max-train-windows 50000 --eval-windows 5000 --hybrid-weights 0.05,0.1,0.25,0.5 --output-dir runs/hcm_ntp_lm/tiny_shakespeare_hcm
 ```
 
 Run the source-grounded HCR faithfulness check:

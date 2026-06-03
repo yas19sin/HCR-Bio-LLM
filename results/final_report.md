@@ -259,6 +259,13 @@ contributes to NTP:
 6. Convert continuous target density back to discrete token probability using
    the target token's empirical CDF bin mass.
 
+The current CLI reports two direct HCM scorers:
+
+- ID-CDF HCM: one empirical-CDF variable per token position.
+- Feature HCM: two deterministic character features per token position
+  (normalized codepoint and coarse character class), then HCR scoring over the
+  full context/target feature window.
+
 The CLI also evaluates a discrete backoff n-gram baseline and a log-linear
 hybrid where HCM is a direct rescoring factor:
 
@@ -270,24 +277,31 @@ p(token | context) proportional to p_ngram(token | context)^(1-w)
 Local sanity run on the stable project file `hcr_transformer_intern_project.md`:
 
 ```bash
-python hcm_ntp_lm.py --data-path hcr_transformer_intern_project.md --context-length 4 --degree 4 --max-total-degree 4 --max-train-windows 30000 --eval-windows 3000 --hybrid-weights 0.05,0.1,0.25,0.5 --sample-model hybrid --sample-hybrid-weight 0.5
+python hcm_ntp_lm.py --data-path hcr_transformer_intern_project.md --context-length 4 --degree 4 --max-total-degree 4 --feature-degree 3 --feature-max-total-degree 3 --max-train-windows 30000 --eval-windows 3000 --hybrid-weights 0.05,0.1,0.25,0.5 --sample-model feature_hybrid --sample-hybrid-weight 0.5 --output-dir runs/hcm_ntp_lm/local_feature_3k
 ```
 
 | Model | Loss | PPL | Acc | Brier |
 |---|---:|---:|---:|---:|
-| Pure HCM NTP | 3.4831 | 32.56 | 0.1187 | 0.8922 |
+| Pure ID-CDF HCM NTP | 3.4831 | 32.56 | 0.1187 | 0.8922 |
+| Pure feature-HCM NTP | 3.6448 | 38.28 | 0.1283 | 0.8862 |
 | Backoff n-gram | 2.3132 | 10.11 | 0.6050 | 0.3771 |
-| N-gram + HCM, `w=0.05` | 2.2395 | 9.39 | 0.6040 | 0.3774 |
-| N-gram + HCM, `w=0.10` | 2.1692 | 8.75 | 0.6053 | 0.3783 |
-| N-gram + HCM, `w=0.25` | 1.9872 | 7.29 | 0.6063 | 0.3865 |
-| N-gram + HCM, `w=0.50` | 1.8733 | 6.51 | 0.5890 | 0.4479 |
+| N-gram + ID-CDF HCM, `w=0.05` | 2.2395 | 9.39 | 0.6040 | 0.3774 |
+| N-gram + ID-CDF HCM, `w=0.10` | 2.1692 | 8.75 | 0.6053 | 0.3783 |
+| N-gram + ID-CDF HCM, `w=0.25` | 1.9872 | 7.29 | 0.6063 | 0.3865 |
+| N-gram + ID-CDF HCM, `w=0.50` | 1.8733 | 6.51 | 0.5890 | 0.4479 |
+| N-gram + feature HCM, `w=0.05` | 2.2426 | 9.42 | 0.6037 | 0.3771 |
+| N-gram + feature HCM, `w=0.10` | 2.1763 | 8.81 | 0.6050 | 0.3778 |
+| N-gram + feature HCM, `w=0.25` | 2.0164 | 7.51 | 0.6057 | 0.3879 |
+| N-gram + feature HCM, `w=0.50` | 1.9536 | 7.05 | 0.5847 | 0.4413 |
 
 Interpretation: pure HCM is a real NTP language model but is weak on raw
-categorical characters because the continuous CDF ordering is a crude token
+categorical characters because a small continuous HCR window is a crude token
 representation. The hybrid result is more promising: HCM directly improves
 negative log-likelihood when used as a conditional-density rescoring factor,
-although Brier score worsens at larger HCM weights. This is the current closest
-artifact to "faithful HCM as a direct contributor to language modeling."
+although Brier score worsens at larger HCM weights. On this file, ID-CDF HCM
+beats the feature-HCM variant by loss, while feature-HCM has slightly better
+Brier at larger hybrid weights. This is the current closest artifact to
+"faithful HCM as a direct contributor to language modeling."
 
 The paper-direct HCR faithfulness check now passes via
 `hcr_faithfulness_check.py`:
